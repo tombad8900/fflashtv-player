@@ -132,7 +132,7 @@ class ExoTvCatalogRepository(
             val config = loadConfig()
             require(config.channelsUrl.isNotBlank()) { "EXO config has no channelsURL" }
             val encodedChannels = getText(config.channelsUrl)
-            val categories = parseCategories(JSONObjectPayload.decode(encodedChannels))
+            val categories = parseCategories(JSONArray(JSONObjectPayload.decode(encodedChannels)))
             ExoTvCatalog(config, categories, System.currentTimeMillis())
         }
     }

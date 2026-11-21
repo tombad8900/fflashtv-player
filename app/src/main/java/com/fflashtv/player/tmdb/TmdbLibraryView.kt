@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.fflashtv.player.model.ContentType
+import com.fflashtv.player.model.QualityOption
 import com.fflashtv.player.sources.ChannelItem
 import com.fflashtv.player.ui.PlayerLaunchBridge
 import kotlinx.coroutines.launch
@@ -220,13 +221,13 @@ fun TmdbLibraryView(
                                     onClick = {
                                         if (activity == null) return@OutlinedButton
                                         isSniffing = true
-                                        sniffStatus = "جاري اقتناص البث من ${srv.name} (مع فلترة الإعلانات)..."
+                                        sniffStatus = "جاري تشغيل كاشف EXO والتقاط البث من ${srv.name}..."
                                         // Remove the Compose picker before the sniffer attaches its interactive WebView.
                                         selectedItem = null
                                         scope.launch {
                                             val imdbId = tmdbClient.fetchExternalImdbId(item.id, item.isTv)
                                             val embedUrl = serversStore.buildEmbedUrl(srv, item.id, imdbId, item.isTv, selectedSeason, selectedEpisode)
-                                            val res = HiddenStreamSniffer.sniff(activity, embedUrl, srv.headers)
+                                            val res = ExoWebViewResolver.capture(activity, embedUrl, srv.headers)
                                             isSniffing = false
                                             res.onSuccess { sniffed ->
                                                 val displayTitle = if (item.isTv) "${item.title} - S${selectedSeason}E${selectedEpisode}" else item.title
@@ -272,7 +273,15 @@ fun TmdbLibraryView(
                 if (sniffed.cookies.isNotBlank()) put("Cookie", sniffed.cookies)
             },
             subtitles = sniffed.subtitles,
-            contentType = ContentType.VOD
+            contentType = ContentType.VOD,
+            qualities = sniffed.candidates.drop(1).mapIndexed { index, candidate ->
+                QualityOption(
+                    label = "بديل EXO " + (index + 1) + " (" + candidate.type + ")",
+                    url = candidate.url,
+                    qualityType = candidate.type,
+                    headers = candidate.headers
+                )
+            }
         )
         AlertDialog(
             onDismissRequest = { readyStream = null },
@@ -297,6 +306,13 @@ fun TmdbLibraryView(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("تشغيل عبر libmpv") }
+                    OutlinedButton(
+                        onClick = {
+                            readyStream = null
+                            PlayerLaunchBridge.launch(context, listOf(channel), 0, PlayerLaunchBridge.EngineType.EXOTV)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("تشغيل عبر مشغل EXO TV") }
                 }
             },
             confirmButton = {},

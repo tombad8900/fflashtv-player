@@ -9,9 +9,6 @@ import com.fflashtv.player.sources.ChannelItem
  * One official playback entry point. All content types use the EXO TV presentation.
  */
 object PlayerLaunchBridge {
-    @Deprecated("EXO TV is the only supported player presentation")
-    enum class EngineType { MEDIA3, LIBMPV, EXOTV }
-
     @Volatile
     var pendingPlaylist: List<PlaybackInput> = emptyList()
         private set
@@ -20,7 +17,7 @@ object PlayerLaunchBridge {
     var pendingStartIndex: Int = 0
         private set
 
-    fun launch(context: Context, items: List<ChannelItem>, startIndex: Int, engine: EngineType) {
+    fun launch(context: Context, items: List<ChannelItem>, startIndex: Int) {
         if (items.isEmpty() || startIndex !in items.indices) return
         pendingPlaylist = items.map(ChannelItem::toPlaybackInput)
         pendingStartIndex = startIndex

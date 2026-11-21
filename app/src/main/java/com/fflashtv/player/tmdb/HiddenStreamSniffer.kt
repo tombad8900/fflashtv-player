@@ -9,9 +9,11 @@ import android.view.ViewGroup
 import android.view.MotionEvent
 import android.view.Gravity
 import android.graphics.Color
-import android.content.res.ColorStateList
-import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
@@ -187,19 +189,22 @@ object HiddenStreamSniffer {
                 val done = AtomicBoolean(false)
                 val subs = CopyOnWriteArrayList<String>()
                 var webView: WebView? = null
-                var playButton: Button? = null
+                var captureContainer: FrameLayout? = null
+                var backCallback: OnBackPressedCallback? = null
                 var pulseJob: Job? = null
                 val root = activity.window.decorView as? ViewGroup
+                val cancelledByBack = AtomicBoolean(false)
 
                 fun cleanup() {
                     pulseJob?.cancel()
                     runCatching {
-                        playButton?.let { root?.removeView(it) }
-                        playButton = null
+                        backCallback?.remove()
+                        backCallback = null
                         webView?.stopLoading()
-                        webView?.let { root?.removeView(it) }
                         webView?.destroy()
                         webView = null
+                        captureContainer?.let { root?.removeView(it) }
+                        captureContainer = null
                     }
                 }
 
@@ -415,9 +420,57 @@ object HiddenStreamSniffer {
                     // Keep the WebView interactive so the user can press play in custom
                     // players. Popup windows remain blocked by WebChromeClient above.
                     wv.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
-                    root?.addView(wv, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+                    val density = activity.resources.displayMetrics.density
+                    val container = FrameLayout(activity).apply {
+                        setBackgroundColor(Color.BLACK)
+                        addView(wv, FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        ))
+                    }
+                    val topBar = LinearLayout(activity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding((8 * density).toInt(), 0, (12 * density).toInt(), 0)
+                        setBackgroundColor(Color.argb(190, 12, 15, 20))
+                        val close = ImageButton(activity).apply {
+                            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+                            contentDescription = "إغلاق صفحة المصدر"
+                            setBackgroundColor(Color.TRANSPARENT)
+                            setOnClickListener { backCallback?.handleOnBackPressed() }
+                        }
+                        addView(close, LinearLayout.LayoutParams((44 * density).toInt(), (48 * density).toInt()))
+                        val status = TextView(activity).apply {
+                            text = "رصد مصدر التشغيل"
+                            setTextColor(Color.WHITE)
+                            textSize = 14f
+                        }
+                        addView(status, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    }
+                    container.addView(topBar, FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        (52 * density).toInt(),
+                        Gravity.TOP
+                    ))
+                    captureContainer = container
+                    root?.addView(container, ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    ))
 
-                    // Native play action: no automatic or random page clicks.
+                    val callback = object : OnBackPressedCallback(true) {
+                        override fun handleOnBackPressed() {
+                            cancelledByBack.set(true)
+                            done.set(true)
+                            cleanup()
+                            if (cont.isActive) cont.resume(null)
+                        }
+                    }
+                    backCallback = callback
+                    activity.onBackPressedDispatcher.addCallback(activity, callback)
+
+                    // Capture starts immediately. The source player's own play control
+                    // remains available; no generic overlay button or synthetic click is shown.
                     wv.setOnTouchListener { _, event ->
                         if (event.action == MotionEvent.ACTION_UP) {
                             val density = wv.resources.displayMetrics.density.coerceAtLeast(1f)
@@ -444,39 +497,6 @@ object HiddenStreamSniffer {
                         false
                     }
 
-                    val actionButton = Button(activity).apply {
-                        text = "تشغيل المصدر"
-                        isAllCaps = false
-                        textSize = 15f
-                        setTextColor(Color.WHITE)
-                        setBackgroundTintList(ColorStateList.valueOf(Color.rgb(176, 126, 43)))
-                        elevation = 12f
-                        setOnClickListener {
-                            wv.evaluateJavascript(
-                                "(function(){return !!(window.__fftvRequestPlay && window.__fftvRequestPlay());})()"
-                            ) { value ->
-                                if (value?.trim() == "true") {
-                                    userRequestedPlay.set(true)
-                                    playRequestedAt.set(android.os.SystemClock.elapsedRealtime())
-                                    text = "جارٍ التقاط البث..."
-                                } else {
-                                    text = "اضغط زر التشغيل داخل الصفحة"
-                                }
-                            }
-                        }
-                    }
-                    playButton = actionButton
-                    val density = activity.resources.displayMetrics.density
-                    val buttonParams = FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                    ).apply {
-                        bottomMargin = (28f * density).toInt()
-                        leftMargin = (16f * density).toInt()
-                        rightMargin = (16f * density).toInt()
-                    }
-                    root?.addView(actionButton, buttonParams)
                     if (headers.isNotEmpty()) wv.loadUrl(embedUrl, headers) else wv.loadUrl(embedUrl)
 
                     pulseJob = CoroutineScope(Dispatchers.Main).launch {
@@ -595,6 +615,8 @@ object HiddenStreamSniffer {
 
         if (result != null) {
             Result.success(result)
+        } else if (cancelledByBack.get()) {
+            Result.failure(IllegalStateException("CAPTURE_CANCELLED"))
         } else {
             val report = buildString {
                 append("انتهت المهلة دون التقاط بث صالح.\n")

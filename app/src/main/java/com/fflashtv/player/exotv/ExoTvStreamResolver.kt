@@ -1,5 +1,6 @@
 package com.fflashtv.player.exotv
 
+import android.content.Context
 import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -20,6 +21,7 @@ data class ExoTvResolvedStream(
 )
 
 class ExoTvStreamResolver(
+    private val context: Context,
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(12, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
@@ -40,7 +42,9 @@ class ExoTvStreamResolver(
                 ExoTvResolverKind.YTV -> resolveYtv(channel, config)
                 ExoTvResolverKind.O -> resolveO(channel, config)
                 ExoTvResolverKind.DEFAULT -> resolveDefault(channel.id ?: error("EXO channel id is missing"), config)
-                ExoTvResolverKind.GEN -> error("EXO GEN resolver is not yet connected")
+                ExoTvResolverKind.GEN -> listOf(
+                    ExoTvGenResolver(context, client).resolve(channel, config).getOrThrow()
+                )
             }.filter { it.url.isNotBlank() }.distinctBy { it.url }
         }
     }

@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.FFlashTVPlayer" parent="android:Theme.Material.NoActionBar" />
+</resources>

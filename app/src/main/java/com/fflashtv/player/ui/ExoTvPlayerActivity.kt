@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Rational
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -16,6 +17,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.fflashtv.player.model.ContentType
+import com.fflashtv.player.model.PlaybackInput
+import com.fflashtv.player.model.QualityOption
+import com.fflashtv.player.tmdb.ExoWebViewResolver
+import kotlinx.coroutines.launch
 
 class ExoTvPlayerActivity : ComponentActivity() {
     private val viewModel: PlayerViewModel by viewModels()
@@ -28,7 +34,7 @@ class ExoTvPlayerActivity : ComponentActivity() {
         viewModel.sessionManager.setFullscreen(true)
         applyFullscreen(true)
         if (savedInstanceState == null) {
-            viewModel.loadPlaylist(PlayerLaunchBridge.pendingPlaylist, PlayerLaunchBridge.pendingStartIndex)
+            loadPendingPlayback()
         }
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
@@ -49,7 +55,57 @@ class ExoTvPlayerActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        viewModel.loadPlaylist(PlayerLaunchBridge.pendingPlaylist, PlayerLaunchBridge.pendingStartIndex)
+        loadPendingPlayback()
+    }
+
+    private fun loadPendingPlayback() {
+        val embed = PlayerLaunchBridge.consumePendingEmbed()
+        if (embed == null) {
+            viewModel.loadPlaylist(PlayerLaunchBridge.pendingPlaylist, PlayerLaunchBridge.pendingStartIndex)
+            return
+        }
+
+        lifecycleScope.launch {
+            var lastError = "لم يتم العثور على مصدر صالح."
+            for (source in embed.sources) {
+                val result = ExoWebViewResolver.capture(this@ExoTvPlayerActivity, source.url, source.headers)
+                val sniffed = result.getOrNull()
+                if (sniffed == null) {
+                    lastError = source.name + ": " + (result.exceptionOrNull()?.message ?: "لم يتم التقاط رابط")
+                    continue
+                }
+
+                val headers = LinkedHashMap(sniffed.requestHeaders)
+                if (sniffed.referer.isNotBlank()) headers["Referer"] = sniffed.referer
+                if (sniffed.userAgent.isNotBlank()) headers["User-Agent"] = sniffed.userAgent
+                if (sniffed.cookies.isNotBlank()) headers["Cookie"] = sniffed.cookies
+
+                viewModel.sessionManager.openSource(
+                    PlaybackInput(
+                        id = embed.mediaId,
+                        url = sniffed.streamUrl,
+                        title = embed.title,
+                        contentType = ContentType.VOD,
+                        headers = headers,
+                        qualities = sniffed.candidates.drop(1).mapIndexed { index, candidate ->
+                            QualityOption(
+                                label = "بديل EXO " + (index + 1) + " (" + candidate.type + ")",
+                                url = candidate.url,
+                                qualityType = candidate.type,
+                                headers = candidate.headers
+                            )
+                        },
+                        posterUrl = embed.posterUrl.takeIf { it.isNotBlank() },
+                        subtitles = sniffed.subtitles,
+                        extraInfo = mapOf("source" to source.name, "resolver" to sniffed.diagnostics)
+                    )
+                )
+                return@launch
+            }
+
+            Toast.makeText(this@ExoTvPlayerActivity, lastError, Toast.LENGTH_LONG).show()
+            finish()
+        }
     }
 
     private fun applyFullscreen(fullscreen: Boolean) {

@@ -104,6 +104,6 @@
 ## TMDB launch/session handoff
 - Selecting a TMDB movie or episode must open `ExoTvPlayerActivity` immediately. Do not call `ExoWebViewResolver.capture` from `TmdbLibraryView` or show a pre-player source-scanning dialog.
 - `PlayerLaunchBridge.launchEmbed` passes an ordered list of embed URLs and each server's own headers to the player. `ExoTvPlayerActivity` attaches the player UI first, then resolves candidates sequentially with the existing resolver.
-- The first successful capture becomes one VOD `PlaybackInput`; remaining captured URLs become server alternatives with their own request headers. They must not become playlist items or trigger automatic episode navigation.
+- The Activity shows the player's buffering overlay while resolution is running. The first successful capture becomes one VOD `PlaybackInput`; remaining captured URLs become server alternatives with their own request headers. They must not become playlist items or trigger automatic episode navigation.
 - Keep IPTV playlist launch unchanged through `PlayerLaunchBridge.launch`. Both launch paths must converge on the same EXO TV Activity and Media3 session manager.
 - If all embed sources fail, show the final resolver error and close the player; never silently leave a blank player or start resolution in the library screen.

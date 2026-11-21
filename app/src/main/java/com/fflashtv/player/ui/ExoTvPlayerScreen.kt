@@ -198,60 +198,66 @@ fun ExoTvPlayerScreen(
                 }
 
                 Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (state.previousAvailable) {
-                        IconButton(onClick = { viewModel.sessionManager.playPrevious(); controlsVisible = true }) {
-                            Icon(Icons.Default.SkipPrevious, "العنصر السابق", tint = Color.White)
+                    IconButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            if (state.isPlaying) viewModel.sessionManager.pause() else viewModel.sessionManager.play()
+                            controlsVisible = true
+                        }
+                    ) {
+                        Icon(
+                            if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            "تشغيل وإيقاف",
+                            tint = Color.White,
+                            modifier = Modifier.size(27.dp)
+                        )
+                    }
+                    IconButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = { viewModel.sessionManager.toggleMute() }
+                    ) {
+                        Icon(
+                            if (state.isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                            "كتم الصوت",
+                            tint = Color.White,
+                            modifier = Modifier.size(25.dp)
+                        )
+                    }
+                    IconButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = { viewModel.openDialog(ActiveDialog.SERVERS) }
+                    ) {
+                        Icon(Icons.Default.Dvr, "السيرفرات", tint = Color.White, modifier = Modifier.size(25.dp))
+                    }
+                    IconButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = { viewModel.sessionManager.cycleAspectRatio() }
+                    ) {
+                        Icon(Icons.Default.AspectRatio, "نمط العرض", tint = Color.White, modifier = Modifier.size(25.dp))
+                    }
+                    if (state.tracks.any { it.type.name == "SUBTITLE" }) {
+                        IconButton(
+                            modifier = Modifier.weight(1f),
+                            onClick = { viewModel.openDialog(ActiveDialog.TRACKS) }
+                        ) {
+                            Icon(Icons.Default.Subtitles, "الترجمة", tint = Color.White, modifier = Modifier.size(25.dp))
                         }
                     }
-                    IconButton(onClick = { viewModel.openDialog(ActiveDialog.SPEED) }) {
-                        Icon(Icons.Default.Speed, "سرعة التشغيل", tint = Color.White)
+                    IconButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = { viewModel.openDialog(ActiveDialog.QUALITY) }
+                    ) {
+                        Icon(Icons.Default.HighQuality, "الجودة", tint = Color.White, modifier = Modifier.size(25.dp))
                     }
-                    IconButton(onClick = { viewModel.sessionManager.seekBackward() }) {
-                        Icon(Icons.Default.Replay10, "رجوع 10 ثوانٍ", tint = Color.White)
-                    }
-                    IconButton(onClick = {
-                        if (state.isPlaying) viewModel.sessionManager.pause() else viewModel.sessionManager.play()
-                        controlsVisible = true
-                    }) {
-                        Icon(if (state.isPlaying) Icons.Default.PauseCircleFilled else Icons.Default.PlayCircleFilled,
-                            "تشغيل وإيقاف", tint = Color(0xFFFFD15C), modifier = Modifier.size(42.dp))
-                    }
-                    IconButton(onClick = { viewModel.sessionManager.seekForward() }) {
-                        Icon(Icons.Default.Forward10, "تقديم 10 ثوانٍ", tint = Color.White)
-                    }
-                    IconButton(onClick = { viewModel.sessionManager.toggleMute() }) {
-                        Icon(if (state.isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                            "كتم الصوت", tint = Color.White)
-                    }
-                    IconButton(onClick = { viewModel.openDialog(ActiveDialog.SERVERS) }) {
-                        Icon(Icons.Default.Dvr, "السيرفرات والبدائل", tint = Color.White)
-                    }
-                    IconButton(onClick = { viewModel.openDialog(ActiveDialog.QUALITY) }) {
-                        Icon(Icons.Default.HighQuality, "جودة الفيديو", tint = Color.White)
-                    }
-                    IconButton(onClick = { viewModel.openDialog(ActiveDialog.VOLUME) }) {
-                        Icon(Icons.Default.Tune, "مستوى الصوت", tint = Color.White)
-                    }
-                    IconButton(onClick = { viewModel.openDialog(ActiveDialog.FORMAT) }) {
-                        Icon(Icons.Default.HighQuality, "الصيغة", tint = Color.White)
-                    }
-                    IconButton(onClick = { viewModel.openDialog(ActiveDialog.TRACKS) }) {
-                        Icon(Icons.Default.Subtitles, "الترجمة", tint = Color.White)
-                    }
-                    IconButton(onClick = { viewModel.sessionManager.cycleAspectRatio() }) {
-                        Icon(Icons.Default.AspectRatio, "نمط العرض", tint = Color.White)
-                    }
-                    if (state.nextAvailable) {
-                        IconButton(onClick = { viewModel.sessionManager.playNext(); controlsVisible = true }) {
-                            Icon(Icons.Default.SkipNext, "العنصر التالي", tint = Color.White)
-                        }
-                    }
-                    IconButton(onClick = onExit) {
-                        Icon(Icons.Default.Close, "إغلاق المشغل", tint = Color.White)
+                    IconButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = onExit
+                    ) {
+                        Icon(Icons.Default.Close, "إغلاق المشغل", tint = Color.White, modifier = Modifier.size(25.dp))
                     }
                 }
                 state.errorMessage?.let {

@@ -1,5 +1,7 @@
 package com.fflashtv.player.ui
 
+import com.fflashtv.player.adblock.BraveAdBlockEngine
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,6 +22,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        BraveAdBlockEngine.initializeAsync(applicationContext)
 
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {

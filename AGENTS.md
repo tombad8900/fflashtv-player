@@ -80,6 +80,7 @@
 ## EXO player feature port
 - Player controls separate alternate server/source selection from in-stream video-track quality selection.
 - Controls include previous/next playlist navigation when available, 10-second seek, mute and volume dialog, playback-speed presets, aspect-ratio cycling, fullscreen, PiP, and playback diagnostics.
+- Android TV/remote input is handled through D-pad, center/enter, media play/pause/next/previous, and volume keys; touch double-tap seeking remains available.
 - External subtitle URLs are added to the active media item after HTTP/HTTPS validation; Media3 handles supported SRT/VTT/ASS subtitle tracks.
 - Server switching preserves VOD position and uses the selected candidate's own headers; it must not advance playlist navigation.
 - Match reference behavior from the inspected layout: distinct server, quality, subtitle, error, seek, and bottom-control panels. Do not claim full parity until each behavior is verified.

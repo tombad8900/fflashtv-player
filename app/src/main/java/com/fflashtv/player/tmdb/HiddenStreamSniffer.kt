@@ -13,6 +13,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
@@ -183,6 +184,7 @@ object HiddenStreamSniffer {
         // WebView callbacks such as shouldInterceptRequest run on background threads.
         // Keep the top-level page URL in a thread-safe snapshot updated on the UI thread.
         val currentPageUrl = AtomicReference(embedUrl)
+        val cancelledByBack = AtomicBoolean(false)
 
         val result = withTimeoutOrNull(timeoutMs) {
             suspendCancellableCoroutine<SniffedStream?> { cont ->
@@ -193,7 +195,6 @@ object HiddenStreamSniffer {
                 var backCallback: OnBackPressedCallback? = null
                 var pulseJob: Job? = null
                 val root = activity.window.decorView as? ViewGroup
-                val cancelledByBack = AtomicBoolean(false)
 
                 fun cleanup() {
                     pulseJob?.cancel()
@@ -309,30 +310,6 @@ object HiddenStreamSniffer {
                             videoTagsFound.set(c)
                         }
 
-                        // Dispatch a real Android touch sequence to the WebView so players
-                        // that reject synthetic JavaScript clicks can still receive a trusted tap.
-                        @JavascriptInterface
-                        fun tapPlayer(cssX: Float, cssY: Float) {
-                            activity.runOnUiThread {
-                                val density = wv.resources.displayMetrics.density
-                                val x = cssX * density
-                                val y = cssY * density
-                                val downTime = android.os.SystemClock.uptimeMillis()
-                                val down = MotionEvent.obtain(
-                                    downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0
-                                )
-                                val up = MotionEvent.obtain(
-                                    downTime, downTime + 70L, MotionEvent.ACTION_UP, x, y, 0
-                                )
-                                try {
-                                    wv.dispatchTouchEvent(down)
-                                    wv.dispatchTouchEvent(up)
-                                } finally {
-                                    down.recycle()
-                                    up.recycle()
-                                }
-                            }
-                        }
                     }, "CinemaCapture")
 
                     wv.webChromeClient = object : WebChromeClient() {
@@ -467,7 +444,9 @@ object HiddenStreamSniffer {
                         }
                     }
                     backCallback = callback
-                    activity.onBackPressedDispatcher.addCallback(activity, callback)
+                    (activity as? ComponentActivity)?.let { owner ->
+                        owner.onBackPressedDispatcher.addCallback(owner, callback)
+                    }
 
                     // Capture starts immediately. The source player's own play control
                     // remains available; no generic overlay button or synthetic click is shown.
@@ -539,53 +518,6 @@ object HiddenStreamSniffer {
                                     document.querySelectorAll('video track, track').forEach(function(t){
                                       if (t.src) CinemaCapture.subtitle(t.src);
                                     });
-                                    // Called only after the user presses the app-owned Play button.
-                                    // It targets known player controls and never generic page buttons.
-                                    window.__fftvRequestPlay = function() {
-                                      try {
-                                        var selectors = [
-                                          '.jw-icon-playback', '.jw-display-icon-container',
-                                          '.vjs-big-play-button', '.plyr__control--overlaid',
-                                          '[data-plyr="play"]', '.flowplayer .fp-play',
-                                          '.fp-ui .fp-play', '.dplayer-play-icon',
-                                          '.artplayer-play', 'button[aria-label*="play" i]',
-                                          '[role="button"][aria-label*="play" i]',
-                                          'button[title*="play" i]', '.play-button',
-                                          '.play-btn', '.player-play', '.play-icon'
-                                        ];
-                                        function visible(el) {
-                                          if (!el || !el.getBoundingClientRect) return false;
-                                          var r = el.getBoundingClientRect();
-                                          var st = getComputedStyle(el);
-                                          return r.width > 8 && r.height > 8 &&
-                                            st.display !== 'none' && st.visibility !== 'hidden' &&
-                                            Number(st.opacity || 1) > 0.05;
-                                        }
-                                        function looksLikeAd(el) {
-                                          for (var n = el, i = 0; n && i < 5; n = n.parentElement, i++) {
-                                            var cls = typeof n.className === 'string' ? n.className : '';
-                                            var marker = ((n.id || '') + ' ' + cls + ' ' +
-                                              ((n.getAttribute && (n.getAttribute('aria-label') || '')) || '')).toLowerCase();
-                                            if (/(^|[ _-])(ad|ads|advert|banner|popup|popunder|sponsor)([ _-]|$)/.test(marker)) return true;
-                                          }
-                                          return false;
-                                        }
-                                        for (var si = 0; si < selectors.length; si++) {
-                                          var nodes = document.querySelectorAll(selectors[si]);
-                                          for (var ni = 0; ni < nodes.length; ni++) {
-                                            var el = nodes[ni];
-                                            if (!visible(el) || looksLikeAd(el)) continue;
-                                            var r = el.getBoundingClientRect();
-                                            if (window.CinemaCapture && window.CinemaCapture.tapPlayer) {
-                                              window.CinemaCapture.tapPlayer(r.left + r.width / 2, r.top + r.height / 2);
-                                              return true;
-                                            }
-                                          }
-                                        }
-                                      } catch (e) {}
-                                      return false;
-                                    };
-
                                     // Strategy 6: inspect late-created controls after ad overlays are blocked.
                                     // Re-run the sequence on later polling ticks as players often mount asynchronously.
                                     try {

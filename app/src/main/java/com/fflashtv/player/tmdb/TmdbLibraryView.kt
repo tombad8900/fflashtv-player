@@ -207,6 +207,9 @@ fun TmdbLibraryView(
                         style = MaterialTheme.typography.bodySmall,
                         color = if (visibleServers.isEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    sniffStatus?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, maxLines = 4)
+                    }
                 }
             },
             confirmButton = {

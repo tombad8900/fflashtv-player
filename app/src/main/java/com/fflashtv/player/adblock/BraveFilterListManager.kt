@@ -59,7 +59,7 @@ object BraveFilterListManager {
     private fun readBundledSection(context: Context, item: BraveFilterList): String {
         val bundle = readAsset(context, "adblock/initial_filters.txt")
         if (bundle.isBlank()) return ""
-        val marker = "! ===== \${item.asset} ====="
+        val marker = "! ===== ${item.asset} ====="
         val markerStart = bundle.indexOf(marker)
         if (markerStart < 0) return ""
         val contentStart = bundle.indexOf('\n', markerStart).let { if (it < 0) bundle.length else it + 1 }
@@ -75,11 +75,11 @@ object BraveFilterListManager {
     }
 
     private fun listContent(context: Context, item: BraveFilterList, directory: File): String {
-        val cached = File(directory, "\${item.id}.txt")
-        val backup = File(directory, "\${item.id}.txt.bak")
+        val cached = File(directory, "${item.id}.txt")
+        val backup = File(directory, "${item.id}.txt.bak")
         return readValidFile(cached)
             ?: readValidFile(backup)
-            ?: readAsset(context, "adblock/lists/\${item.asset}").takeIf { hasRules(it) }
+            ?: readAsset(context, "adblock/lists/${item.asset}").takeIf { hasRules(it) }
             ?: readBundledSection(context, item).takeIf { hasRules(it) }
             ?: ""
     }
@@ -106,8 +106,8 @@ object BraveFilterListManager {
     private fun writeAtomically(target: File, bytes: ByteArray) {
         val directory = target.parentFile ?: throw IllegalStateException("Invalid list directory")
         if (!directory.exists() && !directory.mkdirs()) throw IllegalStateException("Cannot create list directory")
-        val temp = File(directory, ".\${target.name}.\${UUID.randomUUID()}.tmp")
-        val backup = File(directory, "\${target.name}.bak")
+        val temp = File(directory, ".${target.name}.${UUID.randomUUID()}.tmp")
+        val backup = File(directory, "${target.name}.bak")
         try {
             FileOutputStream(temp).use { stream ->
                 stream.write(bytes)
@@ -145,7 +145,7 @@ object BraveFilterListManager {
                 connection.setRequestProperty("Accept", "text/plain,*/*")
                 connection.connect()
                 if (connection.responseCode !in 200..299) {
-                    throw IllegalStateException("HTTP \${connection.responseCode}")
+                    throw IllegalStateException("HTTP ${connection.responseCode}")
                 }
 
                 val bytes = connection.inputStream.use { input ->
@@ -163,7 +163,7 @@ object BraveFilterListManager {
                 }
                 val content = bytes.toString(Charsets.UTF_8)
                 if (!hasRules(content)) throw IllegalStateException("القائمة فارغة أو غير صالحة")
-                writeAtomically(File(directory, "\${item.id}.txt"), bytes)
+                writeAtomically(File(directory, "${item.id}.txt"), bytes)
                 updated++
             } catch (_: Throwable) {
                 failed++

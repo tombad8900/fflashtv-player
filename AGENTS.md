@@ -32,7 +32,7 @@
 - Source wrappers now live in FFlashTV under `app/src/main/java/org/mlm/adblock/`: `AdblockEngine.java`, `BlockDecision.java`, and `RequestTypeMapper.kt`. The app-facing manager/engine/settings are under `com/fflashtv/player/adblock/`.
 - The original filter manager defines eight source URLs and a manual refresh action. The bundled `initial_filters.txt` contains all eight named sections; the ZIP also contains a standalone `ublock-filters.txt` asset. Do not treat the absence of seven separate text files as missing list definitions.
 - FFlashTV's manager uses cached lists, then the standalone asset, then the matching section in `initial_filters.txt`; it validates downloaded content, writes through a temporary file, keeps a `.bak` copy of the previous cache, and rebuilds the native engine after manual refresh.
-- The native binaries and assets still must be copied from STAR into FFlashTV at `app/src/main/jniLibs/{arm64-v8a,armeabi-v7a}/libadblock_ffi.so` and `app/src/main/assets/adblock/{resources.json,initial_filters.txt,lists/ublock-filters.txt}`. The app ABI filters are arm64-v8a and armeabi-v7a.
+- The STAR native binaries and required assets have been copied into FFlashTV at `app/src/main/jniLibs/{arm64-v8a,armeabi-v7a}/libadblock_ffi.so` and `app/src/main/assets/adblock/{resources.json,initial_filters.txt,lists/ublock-filters.txt}` and pushed to `main` in commit `e106856`. The app ABI filters are arm64-v8a and armeabi-v7a.
 - The engine is initialized asynchronously when MainActivity opens. The settings card is in SourcesScreen and retains manual list selection/refresh; no automatic network refresh is claimed.
 - Brave filtering is connected to HiddenStreamSniffer's existing shouldInterceptRequest path. Known media/subtitle extensions and hosts discovered from captured playable resources bypass Brave filtering; the existing ad-host check remains for other requests.
 - This is network-request filtering only at present. The wrapper exposes redirect/rewrite fields but the app currently applies matched/exception decisions only; cosmetic filtering and scriptlet injection are not implemented.
@@ -54,5 +54,6 @@
 
 
 ## Brave integration status (2026-11-21)
-- Source-code port and WebView request interception have been committed, but native binaries/assets have not yet been copied into this repository and no Android build has been run for this integration.
-- Do not report Brave as operational until the two ARM native libraries and required assets are present, the app builds, and a device test confirms native initialization and request decisions.
+- Source-code port, WebView request interception, both ARM native libraries, and the required Brave assets are committed to `main`; native/assets commit: `e106856`.
+- GitHub confirms all five native/asset paths exist. The large `initial_filters.txt` and `.so` blobs may not be returned inline by the GitHub file-content API, so presence is established by their repository paths/blob metadata rather than a text-content read.
+- No Android build or device test has been run for this integration yet. Do not report Brave as operational until the app builds and a device test confirms native initialization, filter loading, and request decisions.

@@ -3,6 +3,10 @@ package com.fflashtv.player.ui
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.nativeKeyEvent
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
@@ -61,7 +65,49 @@ fun ExoTvPlayerScreen(
     }
 
     Box(
-        Modifier.fillMaxSize().background(Color.Black).pointerInput(state.isInPip) {
+        Modifier.fillMaxSize().background(Color.Black)
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when (event.nativeKeyEvent.keyCode) {
+                    AndroidKeyEvent.KEYCODE_DPAD_LEFT -> {
+                        viewModel.sessionManager.seekBackward(); controlsVisible = true; true
+                    }
+                    AndroidKeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        viewModel.sessionManager.seekForward(); controlsVisible = true; true
+                    }
+                    AndroidKeyEvent.KEYCODE_DPAD_UP, AndroidKeyEvent.KEYCODE_DPAD_DOWN -> {
+                        controlsVisible = true; true
+                    }
+                    AndroidKeyEvent.KEYCODE_DPAD_CENTER, AndroidKeyEvent.KEYCODE_ENTER, AndroidKeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                        if (controlsVisible) {
+                            if (state.isPlaying) viewModel.sessionManager.pause() else viewModel.sessionManager.play()
+                        } else controlsVisible = true
+                        true
+                    }
+                    AndroidKeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                        if (state.isPlaying) viewModel.sessionManager.pause() else viewModel.sessionManager.play()
+                        controlsVisible = true; true
+                    }
+                    AndroidKeyEvent.KEYCODE_MEDIA_PLAY -> { viewModel.sessionManager.play(); controlsVisible = true; true }
+                    AndroidKeyEvent.KEYCODE_MEDIA_PAUSE -> { viewModel.sessionManager.pause(); controlsVisible = true; true }
+                    AndroidKeyEvent.KEYCODE_MEDIA_NEXT -> {
+                        if (state.nextAvailable) viewModel.sessionManager.playNext()
+                        controlsVisible = true; true
+                    }
+                    AndroidKeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+                        if (state.previousAvailable) viewModel.sessionManager.playPrevious()
+                        controlsVisible = true; true
+                    }
+                    AndroidKeyEvent.KEYCODE_VOLUME_UP -> {
+                        viewModel.sessionManager.setVolume((state.volume + 5).coerceAtMost(100)); true
+                    }
+                    AndroidKeyEvent.KEYCODE_VOLUME_DOWN -> {
+                        viewModel.sessionManager.setVolume((state.volume - 5).coerceAtLeast(0)); true
+                    }
+                    else -> false
+                }
+            }
+            .pointerInput(state.isInPip) {
             detectTapGestures(
                 onTap = { if (!state.isInPip) controlsVisible = !controlsVisible },
                 onDoubleTap = { point ->

@@ -1,11 +1,8 @@
 package com.fflashtv.player.recovery
 
-import androidx.annotation.OptIn
 import androidx.media3.common.ParserException
 import androidx.media3.common.PlaybackException
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
-import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import com.fflashtv.player.resolver.MimeTypes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -56,10 +53,6 @@ object RetryPolicy {
         return min((errorCount + 1) * 1_000L, MAX_RETRY_DELAY_MS)
     }
 
-    @OptIn(UnstableApi::class)
-    fun createLoadErrorHandlingPolicy(): DefaultLoadErrorHandlingPolicy {
-        return DefaultLoadErrorHandlingPolicy(Int.MAX_VALUE)
-    }
 }
 
 class FormatFallback {

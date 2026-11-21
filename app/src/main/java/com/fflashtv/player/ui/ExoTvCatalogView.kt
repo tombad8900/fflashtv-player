@@ -45,7 +45,7 @@ fun ExoTvCatalogView() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val repository = remember { ExoTvCatalogRepository() }
-    val resolver = remember { ExoTvStreamResolver() }
+    val resolver = remember(context) { ExoTvStreamResolver(context) }
 
     var catalog by remember { mutableStateOf<ExoTvCatalog?>(null) }
     var loading by remember { mutableStateOf(false) }

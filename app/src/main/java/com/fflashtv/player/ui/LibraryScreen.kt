@@ -63,17 +63,23 @@ fun LibraryScreen(ui: LibraryUiState, viewModel: LibraryViewModel, onGoToSources
     val activeSource = ui.activeSource
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 6.dp)) {
-        if (tmdbKey.isNotBlank()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilterChip(
-                    selected = librarySection == 0,
-                    onClick = { librarySection = 0 },
-                    label = { Text("قنوات IPTV") },
-                    modifier = Modifier.weight(1f)
-                )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            FilterChip(
+                selected = librarySection == 0,
+                onClick = { librarySection = 0 },
+                label = { Text("قنوات IPTV") },
+                modifier = Modifier.weight(1f)
+            )
+            FilterChip(
+                selected = librarySection == 2,
+                onClick = { librarySection = 2 },
+                label = { Text("قنوات EXO") },
+                modifier = Modifier.weight(1f)
+            )
+            if (tmdbKey.isNotBlank()) {
                 FilterChip(
                     selected = librarySection == 1,
                     onClick = { librarySection = 1 },
@@ -81,6 +87,11 @@ fun LibraryScreen(ui: LibraryUiState, viewModel: LibraryViewModel, onGoToSources
                     modifier = Modifier.weight(1f)
                 )
             }
+        }
+
+        if (librarySection == 2) {
+            ExoTvCatalogView()
+            return@Column
         }
 
         if (tmdbKey.isNotBlank() && librarySection == 1) {

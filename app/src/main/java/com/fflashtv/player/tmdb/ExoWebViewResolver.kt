@@ -292,7 +292,7 @@ object ExoWebViewResolver {
           window.__exoLiveStream=function(){
             var out=[];function push(u){if(typeof u==='string'&&OPEN.test(u)&&out.indexOf(u)<0)out.push(u);}
             try{var v=document.querySelector('video');if(v){push(v.currentSrc);push(v.src);push(v.getAttribute&&v.getAttribute('src'));}
-            document.querySelectorAll('video source,source').forEach(function(s){push(s.src||(s.getAttribute&&s.getAttribute('src'));});
+            document.querySelectorAll('video source,source').forEach(function(s){push(s.src||(s.getAttribute&&s.getAttribute('src')));});
             performance.getEntriesByType('resource').forEach(function(e){push(e.name);});}catch(e){}
             live.forEach(push);return out;
           };

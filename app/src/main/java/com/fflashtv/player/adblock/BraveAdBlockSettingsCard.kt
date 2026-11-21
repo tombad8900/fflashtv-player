@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
 @Composable
 fun BraveAdBlockSettingsCard() {
@@ -35,8 +36,21 @@ fun BraveAdBlockSettingsCard() {
     var status by remember { mutableStateOf("يتم تهيئة المحرك عند فتح التطبيق") }
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
 
-    LaunchedEffect(Unit) {
-        BraveAdBlockEngine.initializeAsync(context)
+    LaunchedEffect(enabled) {
+        if (enabled) {
+            BraveAdBlockEngine.initializeAsync(context)
+            repeat(40) {
+                if (BraveAdBlockEngine.isReady()) {
+                    status = "المحرك جاهز"
+                    return@LaunchedEffect
+                }
+                BraveAdBlockEngine.lastError()?.let {
+                    status = "تعذر تهيئة المحرك: $it"
+                    return@LaunchedEffect
+                }
+                delay(250)
+            }
+        }
     }
 
     Card(modifier = Modifier.fillMaxWidth()) {

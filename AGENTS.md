@@ -61,3 +61,10 @@
 - Player tests must cover standard Media3, libmpv, and EXO-style Activity launch; candidate selection must retain its own headers and must not alter playlist navigation.
 - Treat DRM and MSE/Blob playback as fallback cases; do not claim their media URLs can always be extracted.
 - A successful build does not establish runtime correctness. Device testing is still required for stream capture, playback, PiP, rotation, and Back behavior.
+
+
+## Build validation fixes
+- `PlayerLaunchBridge` has one canonical definition in `ui/PlayerLaunchBridge.kt`; do not redeclare it in `LibraryViewModel.kt`.
+- The shared player bridge owns the `MEDIA3`, `LIBMPV`, and `EXOTV` presentation selection.
+- Hidden WebView resolver code using visibility/layer constants must import `android.view.View`.
+- Always run `:app:assembleDebug` after Kotlin integration changes; Termux builds may emit non-fatal NDK `llvm-strip` host-binary warnings while packaging unstripped native libraries.

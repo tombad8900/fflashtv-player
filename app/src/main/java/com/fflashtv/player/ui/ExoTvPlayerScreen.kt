@@ -89,23 +89,30 @@ fun ExoTvPlayerScreen(
         }
 
         if (controlsVisible && !state.isInPip) {
+            Row(
+                Modifier.align(Alignment.TopStart).fillMaxWidth()
+                    .background(Color(0x99080A0E)).padding(start = 20.dp, end = 12.dp, top = 10.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(state.title, color = Color.White, style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1, modifier = Modifier.weight(1f))
+                IconButton(onClick = {
+                    val next = !state.isFullscreen
+                    viewModel.sessionManager.setFullscreen(next)
+                    onToggleFullscreen(next)
+                }) { Icon(Icons.Default.Fullscreen, "ملء الشاشة", tint = Color.White) }
+                IconButton(onClick = onEnterPip) {
+                    Icon(Icons.Default.PictureInPictureAlt, "نافذة عائمة", tint = Color.White)
+                }
+            }
+        }
+
+        if (controlsVisible && !state.isInPip) {
             Column(
                 Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+
                     .background(Color(0xCC080A0E)).padding(horizontal = 18.dp, vertical = 12.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(state.title, color = Color.White, style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1, modifier = Modifier.weight(1f))
-                    IconButton(onClick = {
-                        val next = !state.isFullscreen
-                        viewModel.sessionManager.setFullscreen(next)
-                        onToggleFullscreen(next)
-                    }) { Icon(Icons.Default.Fullscreen, "ملء الشاشة", tint = Color.White) }
-                    IconButton(onClick = onEnterPip) {
-                        Icon(Icons.Default.PictureInPictureAlt, "نافذة عائمة", tint = Color.White)
-                    }
-                }
-
                 if (!state.isLive && state.durationMs > 0L) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(formatTime(state.positionMs), color = Color.White, style = MaterialTheme.typography.labelSmall)

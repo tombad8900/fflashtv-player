@@ -233,7 +233,11 @@ fun TmdbLibraryView(
                                                 selectedItem = null
                                                 readyStream = displayTitle to sniffed
                                             }.onFailure { err ->
-                                                sniffStatus = err.message ?: "فشل الاقتناص"
+                                                sniffStatus = if (err.message == "CAPTURE_CANCELLED") {
+                                                    null
+                                                } else {
+                                                    err.message ?: "فشل الاقتناص"
+                                                }
                                                 selectedItem = item
                                             }
                                         }

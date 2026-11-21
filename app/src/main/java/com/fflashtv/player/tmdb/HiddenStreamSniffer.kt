@@ -261,7 +261,10 @@ object HiddenStreamSniffer {
                     wv.addJavascriptInterface(object {
                         @JavascriptInterface
                         fun subtitle(url: String) {
-                            if (url.startsWith("http") && !subs.contains(url)) subs.add(url)
+                            if (url.startsWith("http") && !subs.contains(url)) {
+                                subs.add(url)
+                                lastCandidateAt.set(android.os.SystemClock.elapsedRealtime())
+                            }
                         }
 
                         @JavascriptInterface
@@ -276,6 +279,15 @@ object HiddenStreamSniffer {
                         @JavascriptInterface
                         fun onVideoTagCount(c: Int) {
                             videoTagsFound.set(c)
+                        }
+
+                        @JavascriptInterface
+                        fun onPlayerGesture() {
+                            userRequestedPlay.set(true)
+                            playRequestedAt.set(android.os.SystemClock.elapsedRealtime())
+                            activity.runOnUiThread {
+                                playButton?.text = "جارٍ التقاط البث..."
+                            }
                         }
 
                         // Dispatch a real Android touch sequence to the WebView so players
@@ -335,7 +347,10 @@ object HiddenStreamSniffer {
                             }
                             classifyResource(reqUrl)?.let { item ->
                                 if (!item.playable) {
-                                    if (!subs.contains(item.url)) subs.add(item.url)
+                                    if (!subs.contains(item.url)) {
+                                    subs.add(item.url)
+                                    lastCandidateAt.set(android.os.SystemClock.elapsedRealtime())
+                                }
                                 } else {
                                     val allowed = setOf("user-agent", "referer", "origin", "cookie", "authorization")
                                     val hdrs = (request.requestHeaders ?: emptyMap())
@@ -363,8 +378,26 @@ object HiddenStreamSniffer {
                     // Native play action: no automatic or random page clicks.
                     wv.setOnTouchListener { _, event ->
                         if (event.action == MotionEvent.ACTION_UP) {
-                            userRequestedPlay.set(true)
-                            playRequestedAt.set(android.os.SystemClock.elapsedRealtime())
+                            val density = wv.resources.displayMetrics.density.coerceAtLeast(1f)
+                            val cssX = event.x / density
+                            val cssY = event.y / density
+                            val gestureProbe = """
+                                (function(x,y){
+                                  var el = document.elementFromPoint(x,y);
+                                  var playerSelector = 'video, .jwplayer, .video-js, .plyr, .dplayer, .artplayer, .flowplayer, [data-player], [class*="player-container"]';
+                                  while (el) {
+                                    try { if (el.matches && el.matches(playerSelector)) return true; } catch(e) {}
+                                    el = el.parentElement;
+                                  }
+                                  return false;
+                                })($cssX,$cssY)
+                            """.trimIndent()
+                            wv.evaluateJavascript(gestureProbe) { value ->
+                                if (value?.trim() == "true") {
+                                    userRequestedPlay.set(true)
+                                    playRequestedAt.set(android.os.SystemClock.elapsedRealtime())
+                                }
+                            }
                         }
                         false
                     }

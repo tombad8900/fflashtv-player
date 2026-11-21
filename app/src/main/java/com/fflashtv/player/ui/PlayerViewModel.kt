@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 enum class ActiveDialog {
-    NONE, VOLUME, QUALITY, TRACKS, FORMAT, ERROR, OPEN_STREAM
+    NONE, VOLUME, SERVERS, QUALITY, TRACKS, SPEED, FORMAT, ERROR, OPEN_STREAM
 }
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
@@ -34,6 +34,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _formatMessage = MutableStateFlow<String?>(null)
     val formatMessage: StateFlow<String?> = _formatMessage.asStateFlow()
+
+    fun addExternalSubtitle(url: String): Result<Unit> = sessionManager.addExternalSubtitle(url)
+
+    fun setPlaybackSpeed(speed: Float) { sessionManager.setPlaybackSpeed(speed) }
 
     fun retryCurrent() {
         sessionManager.retryCurrent()

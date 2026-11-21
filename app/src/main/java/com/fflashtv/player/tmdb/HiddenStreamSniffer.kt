@@ -6,6 +6,7 @@ import android.net.Uri
 import android.util.Base64
 import android.view.View
 import android.view.ViewGroup
+import android.view.MotionEvent
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
@@ -266,6 +267,31 @@ object HiddenStreamSniffer {
                         fun onVideoTagCount(c: Int) {
                             videoTagsFound.set(c)
                         }
+
+                        // Dispatch a real Android touch sequence to the WebView so players
+                        // that reject synthetic JavaScript clicks can still receive a trusted tap.
+                        @JavascriptInterface
+                        fun tapPlayer(cssX: Float, cssY: Float) {
+                            activity.runOnUiThread {
+                                val density = wv.resources.displayMetrics.density
+                                val x = cssX * density
+                                val y = cssY * density
+                                val downTime = android.os.SystemClock.uptimeMillis()
+                                val down = MotionEvent.obtain(
+                                    downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0
+                                )
+                                val up = MotionEvent.obtain(
+                                    downTime, downTime + 70L, MotionEvent.ACTION_UP, x, y, 0
+                                )
+                                try {
+                                    wv.dispatchTouchEvent(down)
+                                    wv.dispatchTouchEvent(up)
+                                } finally {
+                                    down.recycle()
+                                    up.recycle()
+                                }
+                            }
+                        }
                     }, "CinemaCapture")
 
                     wv.webChromeClient = object : WebChromeClient() {
@@ -394,6 +420,12 @@ object HiddenStreamSniffer {
                                       try {
                                         var r = el.getBoundingClientRect();
                                         var x = r.left + r.width / 2, y = r.top + r.height / 2;
+                                        // Prefer a native Android touch: unlike element.click(), it can
+                                        // satisfy players that inspect trusted pointer/touch gestures.
+                                        if (window.CinemaCapture && window.CinemaCapture.tapPlayer) {
+                                          window.CinemaCapture.tapPlayer(x, y);
+                                          return true;
+                                        }
                                         ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(type) {
                                           var C = type.indexOf('pointer') === 0 && window.PointerEvent ? PointerEvent : MouseEvent;
                                           el.dispatchEvent(new C(type, {

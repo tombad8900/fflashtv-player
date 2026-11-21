@@ -3,20 +3,15 @@ package com.fflashtv.player.core
 import android.content.Context
 import android.net.Uri
 import androidx.annotation.OptIn
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.extractor.DefaultExtractorsFactory
-import com.fflashtv.player.buffer.BufferManager
+import androidx.media3.datasource.DefaultHttpDataSource
 import com.fflashtv.player.drm.DrmManager
 import com.fflashtv.player.model.ParsedPlayback
-import com.fflashtv.player.network.StreamDataSourceFactory
-import com.fflashtv.player.recovery.RetryPolicy
 
 interface PlayerController {
     fun play()
@@ -118,10 +113,8 @@ class LiveStreamManager {
     }
 }
 
-class ExoPlayerEngine(
+class ExoTvOriginalPlayerEngine(
     private val context: Context,
-    private val dataSourceFactoryProvider: StreamDataSourceFactory,
-    private val bufferManager: BufferManager,
     private val drmManager: DrmManager
 ) : PlayerController {
 
@@ -129,45 +122,28 @@ class ExoPlayerEngine(
         private set
 
     @OptIn(UnstableApi::class)
-    fun createOrReplacePlayer(playback: ParsedPlayback, mimeType: String?, strictClient: okhttp3.OkHttpClient? = null): ExoPlayer {
+    fun createOrReplacePlayer(playback: ParsedPlayback, mimeType: String?): ExoPlayer {
         exoPlayer?.release()
 
-        val extractorsFactory = DefaultExtractorsFactory()
-            .setTsExtractorFlags(25)
-            .setConstantBitrateSeekingEnabled(true)
+        val hasExplicitUserAgent = playback.headers.keys.any { it.equals("User-Agent", ignoreCase = true) }
+        val defaultUserAgent = if (hasExplicitUserAgent) null else ORIGINAL_DEFAULT_USER_AGENT
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setConnectTimeoutMs(5_000)
+            .setReadTimeoutMs(12_000)
+            .setUserAgent(defaultUserAgent)
+            .setDefaultRequestProperties(playback.headers)
 
-        val okHttpFactory = dataSourceFactoryProvider.create(
-            userAgent = playback.userAgent,
-            allowInsecureTls = playback.allowInsecureTls,
-            strictClient = strictClient
-        )
-
-        val mediaSourceFactory = DefaultMediaSourceFactory(okHttpFactory, extractorsFactory)
-            .setLoadErrorHandlingPolicy(RetryPolicy.createLoadErrorHandlingPolicy())
+        val mediaSourceFactory = DefaultMediaSourceFactory(context)
+            .setDataSourceFactory(httpFactory)
 
         drmManager.createDrmSessionManagerProvider(playback.drmConfig)?.let { provider ->
             mediaSourceFactory.setDrmSessionManagerProvider(provider)
         }
 
-        val profile = bufferManager.profileFor(
-            contentType = playback.contentType,
-            isLive = playback.isLive,
-            mimeType = mimeType
-        )
-        val loadControl = bufferManager.buildLoadControl(profile)
-
-        val audioAttributes = AudioAttributes.Builder()
-            .setContentType(3) // C.AUDIO_CONTENT_TYPE_MOVIE
-            .setUsage(1)       // C.USAGE_MEDIA
-            .build()
-
+        // EXO TV's original player uses Media3's default LoadControl and renderer stack.
         val player = ExoPlayer.Builder(context)
             .setMediaSourceFactory(mediaSourceFactory)
-            .setLoadControl(loadControl)
-            .setWakeMode(2) // C.WAKE_MODE_NETWORK
-            .setAudioAttributes(audioAttributes, true)
-            .setSeekBackIncrementMs(10_000L)
-            .setSeekForwardIncrementMs(10_000L)
             .build()
 
         player.volume = 1.0f
@@ -197,8 +173,7 @@ class ExoPlayerEngine(
     }
 
     override fun setVolume(volumePercent: Int) {
-        val clamped = volumePercent.coerceIn(0, 100)
-        exoPlayer?.volume = clamped / 100f
+        exoPlayer?.volume = volumePercent.coerceIn(0, 100) / 100f
     }
 
     override fun setPlaybackSpeed(speed: Float) {
@@ -208,5 +183,10 @@ class ExoPlayerEngine(
     override fun release() {
         exoPlayer?.release()
         exoPlayer = null
+    }
+
+    companion object {
+        private const val ORIGINAL_DEFAULT_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
     }
 }

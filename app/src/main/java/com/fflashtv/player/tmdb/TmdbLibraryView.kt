@@ -257,7 +257,7 @@ fun TmdbLibraryView(
                                         )
                                     }
                                 )
-                                PlayerLaunchBridge.launch(context, listOf(channel), 0, PlayerLaunchBridge.EngineType.EXOTV)
+                                PlayerLaunchBridge.launch(context, listOf(channel), 0)
                                 launched = true
                                 break
                             }

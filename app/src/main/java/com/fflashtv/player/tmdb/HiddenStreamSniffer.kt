@@ -168,6 +168,7 @@ object HiddenStreamSniffer {
         timeoutMs: Long = 90_000L
     ): Result<SniffedStream> = withContext(Dispatchers.Main) {
         val visitedHosts = CopyOnWriteArrayList<String>()
+        val protectedMediaHosts = CopyOnWriteArrayList<String>()
         val pageLoaded = AtomicBoolean(false)
         val videoTagsFound = AtomicInteger(0)
         val jsErrorCount = AtomicInteger(0)
@@ -352,7 +353,9 @@ object HiddenStreamSniffer {
                             val requestHeaders = request.requestHeaders ?: emptyMap()
                             val accept = requestHeaders.entries
                                 .firstOrNull { it.key.equals("Accept", true) }?.value
-                            val protectedPlaybackRequest = isProtectedPlaybackRequest(reqUrl, accept)
+                            val requestHost = runCatching { Uri.parse(reqUrl).host }.getOrNull()
+                            val protectedPlaybackRequest = isProtectedPlaybackRequest(reqUrl, accept) ||
+                                (!requestHost.isNullOrBlank() && protectedMediaHosts.contains(requestHost))
                             if (!protectedPlaybackRequest) {
                                 val pageUrl = view?.url ?: embedUrl
                                 val blockedByBrave = runCatching {
@@ -377,6 +380,9 @@ object HiddenStreamSniffer {
                                     lastCandidateAt.set(android.os.SystemClock.elapsedRealtime())
                                 }
                                 } else {
+                                    runCatching { Uri.parse(item.url).host }.getOrNull()?.let { mediaHost ->
+                                        if (mediaHost !in protectedMediaHosts) protectedMediaHosts.add(mediaHost)
+                                    }
                                     val allowed = setOf("user-agent", "referer", "origin", "cookie", "authorization")
                                     val hdrs = (request.requestHeaders ?: emptyMap())
                                         .filterKeys { it.lowercase() in allowed }

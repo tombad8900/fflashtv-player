@@ -50,7 +50,7 @@
 - Manual touch intent is accepted only when the touch lands inside a recognized media/player region (video, JW Player, Video.js, Plyr, DPlayer, Artplayer, Flowplayer, or an explicitly marked player container).
 - Subtitle discoveries reset the candidate quiet-period timer so late subtitle requests are less likely to be missed before handoff.
 - The app-owned Play overlay still targets recognized player controls; it must not click arbitrary page elements.
-- Brave engine port is not yet implemented in FFlashTV. The exact STAR native wrapper, ABI libraries, and asset files must be obtained from the STAR working tree before integration; do not fabricate or substitute them.
+- Brave engine integration is now present in FFlashTV; see the status section below. Keep the native STAR wrapper, ARM ABI libraries, and bundled assets aligned with their original versions.
 
 
 ## Brave integration status (2026-11-21)

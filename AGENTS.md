@@ -76,3 +76,9 @@
 - TMDB movie/episode playback automatically tries enabled JSON servers in configured priority order, captures the first usable stream with `ExoWebViewResolver`, and launches EXO TV directly. Do not add manual server or engine selection to the viewing flow.
 - Legacy Media3 and libmpv Activities, screens, engine sources, and the libmpv Gradle dependency have been removed. Keep EXO TV as the only playback presentation.
 - EXO TV here is the EXO-derived player presentation on AndroidX Media3; do not claim that the proprietary APK's complete binary/classes were transplanted from Smali.
+
+## Private EXO reference APK decompilation
+- The source repository `tombad8900/exotv-analysis-reference` is private and cannot be checked out with the target repository's default `GITHUB_TOKEN`.
+- The workflow `.github/workflows/decompile-exotv-reference.yml` is manual (`workflow_dispatch`) and uses the repository secret `REFERENCE_REPO_TOKEN` for the source checkout.
+- Before dispatching it, configure `REFERENCE_REPO_TOKEN` in the target repository with a fine-grained token that has read-only Contents access to `tombad8900/exotv-analysis-reference`. Never commit the token or APK credentials.
+- The workflow uploads `exotv-original-apk-decompiled` containing Apktool resources/manifest and JADX Java output plus the original APK. Download and inspect the artifact before claiming a complete source port.

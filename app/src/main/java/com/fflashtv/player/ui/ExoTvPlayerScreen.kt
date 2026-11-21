@@ -9,6 +9,9 @@ import androidx.compose.ui.input.key.nativeKeyEvent
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.activity.compose.BackHandler
@@ -40,6 +43,8 @@ fun ExoTvPlayerScreen(
     val history by viewModel.history.collectAsState()
     val formatMessage by viewModel.formatMessage.collectAsState()
     var controlsVisible by remember { mutableStateOf(true) }
+    val playerFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { playerFocusRequester.requestFocus() }
     var scrubbing by remember { mutableStateOf(false) }
     var scrubPosition by remember(state.sessionId) { mutableFloatStateOf(state.positionMs.toFloat()) }
 
@@ -65,7 +70,7 @@ fun ExoTvPlayerScreen(
     }
 
     Box(
-        Modifier.fillMaxSize().background(Color.Black)
+        Modifier.fillMaxSize().background(Color.Black).focusRequester(playerFocusRequester).focusable()
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.nativeKeyEvent.keyCode) {

@@ -304,6 +304,13 @@ fun LibraryScreen(ui: LibraryUiState, viewModel: LibraryViewModel, onGoToSources
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("libmpv (المحرك المفتوح المصدر)") }
+                    OutlinedButton(
+                        onClick = {
+                            pendingEngineChoice = null
+                            PlayerLaunchBridge.launch(context, list, idx, PlayerLaunchBridge.EngineType.EXOTV)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("مشغل EXO TV") }
                 }
             },
             confirmButton = {},

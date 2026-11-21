@@ -17,6 +17,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
 import com.fflashtv.player.model.BackupSource
 import com.fflashtv.player.model.ContentType
 import com.fflashtv.player.model.PlaybackInput

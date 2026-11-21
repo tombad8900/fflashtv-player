@@ -259,6 +259,7 @@ fun TmdbLibraryView(
             url = sniffed.streamUrl,
             groupName = "TMDB",
             headers = buildMap {
+                putAll(sniffed.requestHeaders)
                 put("Referer", sniffed.referer)
                 put("User-Agent", sniffed.userAgent)
                 if (sniffed.cookies.isNotBlank()) put("Cookie", sniffed.cookies)

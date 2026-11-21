@@ -227,7 +227,7 @@ object HiddenStreamSniffer {
                     } + if (value.contains("master")) 8 else 0
                 }
 
-                fun offerCandidate(url: String, kind: String, hdrs: Map<String, String>) {
+                fun offerCandidate(url: String, kind: String, hdrs: Map<String, String>, preferIncomingHeaders: Boolean = false) {
                     if (done.get() || isAdUrl(url)) return
                     val item = classifyResource(url)?.takeIf { it.playable } ?: return
                     val allowed = setOf("user-agent", "referer", "origin", "cookie", "authorization", "accept")
@@ -250,7 +250,7 @@ object HiddenStreamSniffer {
                             val oldValue = oldKey?.let { merged[it] }.orEmpty()
                             val isFallback = (key.equals("Referer", true) && oldValue == embedUrl) ||
                                 (key.equals("User-Agent", true) && oldValue == BROWSER_UA)
-                            if (oldKey == null || oldValue.isBlank() || isFallback) {
+                            if (preferIncomingHeaders || oldKey == null || oldValue.isBlank() || isFallback) {
                                 if (oldKey != null) merged.remove(oldKey)
                                 merged[key] = value
                             }
@@ -411,7 +411,7 @@ object HiddenStreamSniffer {
                                     }
                                     if (hdrs.keys.none { it.equals("User-Agent", true) }) hdrs["User-Agent"] = ua
                                     if (hdrs.keys.none { it.equals("Referer", true) }) hdrs["Referer"] = embedUrl
-                                    offerCandidate(item.url, item.kind, hdrs)
+                                    offerCandidate(item.url, item.kind, hdrs, preferIncomingHeaders = true)
                                 }
                             }
                             return null

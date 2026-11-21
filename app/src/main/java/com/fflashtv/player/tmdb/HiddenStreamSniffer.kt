@@ -1,6 +1,7 @@
 package com.fflashtv.player.tmdb
 
 import android.annotation.SuppressLint
+import com.fflashtv.player.adblock.BraveAdBlockEngine
 import android.app.Activity
 import android.net.Uri
 import android.util.Base64
@@ -44,6 +45,22 @@ object HiddenStreamSniffer {
         "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
     private val ARABIC_SUB_REGEX = Regex("""[._/\-=](ar|ara|arabic)[._/\-=]""", RegexOption.IGNORE_CASE)
+
+    private fun isProtectedPlaybackRequest(url: String, accept: String?): Boolean {
+        val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return false
+        val path = uri.encodedPath.orEmpty().lowercase()
+        val query = uri.encodedQuery.orEmpty().lowercase()
+        val value = (accept ?: "").lowercase()
+        val mediaAndSubtitleExtensions = listOf(
+            ".m3u8", ".mpd", ".mp4", ".m4v", ".mkv", ".webm", ".mov", ".flv", ".avi",
+            ".ts", ".m4s", ".aac", ".mp3", ".m4a", ".ac3", ".ec3",
+            ".vtt", ".srt", ".ass", ".ssa", ".ttml", ".dfxp", ".sub", ".idx"
+        )
+        return value.contains("video/") || value.contains("audio/") ||
+            value.contains("text/vtt") || mediaAndSubtitleExtensions.any {
+                path.endsWith(it) || query.contains(it)
+            }
+    }
 
     private fun isAdUrl(url: String): Boolean {
         val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return false
@@ -319,7 +336,9 @@ object HiddenStreamSniffer {
                     wv.webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                             val reqUrl = request?.url?.toString() ?: return true
-                            if (isAdUrl(reqUrl)) return true
+                            val accept = request.requestHeaders.entries
+                                .firstOrNull { it.key.equals("Accept", true) }?.value
+                            if (!isProtectedPlaybackRequest(reqUrl, accept) && isAdUrl(reqUrl)) return true
                             return false
                         }
 
@@ -330,8 +349,23 @@ object HiddenStreamSniffer {
 
                         override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                             val reqUrl = request?.url?.toString() ?: return null
-                            if (isAdUrl(reqUrl)) {
-                                return WebResourceResponse("text/plain", "UTF-8", 204, "No Content", emptyMap(), ByteArrayInputStream(ByteArray(0)))
+                            val requestHeaders = request.requestHeaders ?: emptyMap()
+                            val accept = requestHeaders.entries
+                                .firstOrNull { it.key.equals("Accept", true) }?.value
+                            val protectedPlaybackRequest = isProtectedPlaybackRequest(reqUrl, accept)
+                            if (!protectedPlaybackRequest) {
+                                val pageUrl = view?.url ?: embedUrl
+                                val blockedByBrave = runCatching {
+                                    BraveAdBlockEngine.shouldBlock(
+                                        reqUrl,
+                                        pageUrl,
+                                        accept,
+                                        request.isForMainFrame
+                                    )
+                                }.getOrDefault(false)
+                                if (isAdUrl(reqUrl) || blockedByBrave) {
+                                    return WebResourceResponse("text/plain", "UTF-8", 204, "No Content", emptyMap(), ByteArrayInputStream(ByteArray(0)))
+                                }
                             }
                             runCatching { Uri.parse(reqUrl).host }.getOrNull()?.let { h ->
                                 if (visitedHosts.size < 10 && h !in visitedHosts) visitedHosts.add(h)

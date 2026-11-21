@@ -21,7 +21,7 @@ object PlayerLaunchBridge {
         if (items.isEmpty() || startIndex !in items.indices) return
         pendingPlaylist = items.map(ChannelItem::toPlaybackInput)
         pendingStartIndex = startIndex
-        // Retain the parameter temporarily for source compatibility; never launch legacy players.
+        // The EXO TV Activity is the only registered playback destination.
         val intent = Intent(context, ExoTvPlayerActivity::class.java)
         if (context !is android.app.Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)

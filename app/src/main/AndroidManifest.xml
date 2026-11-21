@@ -21,18 +21,6 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.PlayerActivity"
-            android:exported="false"
-            android:launchMode="singleTask"
-            android:supportsPictureInPicture="true"
-            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboardHidden" />
-            <activity
-            android:name=".mpv.MpvPlayerActivity"
-            android:exported="false"
-            android:launchMode="singleTask"
-            android:supportsPictureInPicture="true"
-            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboardHidden" />
-        <activity
             android:name=".ui.ExoTvPlayerActivity"
             android:exported="false"
             android:launchMode="singleTask"

@@ -147,6 +147,23 @@ class PlaybackSessionManager(
         }
     }
 
+    fun setResolvingExternalSource(title: String) {
+        _state.update {
+            it.copy(
+                title = title,
+                lifecycle = SessionLifecycleState.PREPARING,
+                isPlaying = false,
+                isBuffering = true,
+                showPoster = false,
+                errorMessage = null,
+                positionMs = 0L,
+                durationMs = 0L,
+                tracks = emptyList(),
+                qualities = emptyList()
+            )
+        }
+    }
+
     fun retryCurrent() {
         val input = activeSession?.parsed?.originalInput ?: return
         openSource(input, preservePosition = !_state.value.isLive)

@@ -1,11 +1,6 @@
 name: Decompile EXO TV reference APK
 
 on:
-  push:
-    branches:
-      - feature/exotv-resolver-and-player
-    paths:
-      - .github/workflows/decompile-exotv-reference.yml
   workflow_dispatch:
 
 permissions:
@@ -27,6 +22,7 @@ jobs:
           ref: main
           path: reference
           fetch-depth: 1
+          token: ${{ secrets.REFERENCE_REPO_TOKEN }}
 
       - name: Install decompilers
         shell: bash

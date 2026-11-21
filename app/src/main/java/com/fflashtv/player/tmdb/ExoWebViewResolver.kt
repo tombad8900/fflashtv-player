@@ -74,7 +74,14 @@ object ExoWebViewResolver {
                     fun headers(url: String, raw: Map<String, String>, ref: String): Map<String, String> {
                         val allowed = setOf("user-agent", "referer", "origin", "cookie", "authorization", "accept")
                         val out = LinkedHashMap<String, String>()
-                        raw.forEach { (k, v) -> if (k.lowercase() in allowed && v.isNotBlank()) out[k] = v }
+                        sourceHeaders.forEach { (k, v) ->
+                            if (k.lowercase() in allowed && !k.equals("User-Agent", true) && v.isNotBlank()) out[k] = v
+                        }
+                        raw.forEach { (k, v) -> if (k.lowercase() in allowed && v.isNotBlank()) {
+                            val oldKey = out.keys.firstOrNull { it.equals(k, true) }
+                            if (oldKey != null) out.remove(oldKey)
+                            out[k] = v
+                        } }
                         if (out.keys.none { it.equals("User-Agent", true) }) out["User-Agent"] = UA
                         if (out.keys.none { it.equals("Referer", true) }) out["Referer"] = ref
                         if (out.keys.none { it.equals("Cookie", true) }) {
@@ -146,7 +153,7 @@ object ExoWebViewResolver {
                             "stream" -> {
                                 val array = obj.optJSONArray("urls") ?: JSONArray()
                                 val urls = (0 until array.length()).map { array.optString(it) }.filter { it.isNotBlank() }
-                                success(urls)
+                                handler.postDelayed({ success(urls) }, 250L)
                             }
                             "hop" -> loadHop(obj.optString("url"))
                             "expired" -> fail("انتهت صلاحية جلسة المصدر (EXO expired)")

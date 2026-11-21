@@ -281,15 +281,6 @@ object HiddenStreamSniffer {
                             videoTagsFound.set(c)
                         }
 
-                        @JavascriptInterface
-                        fun onPlayerGesture() {
-                            userRequestedPlay.set(true)
-                            playRequestedAt.set(android.os.SystemClock.elapsedRealtime())
-                            activity.runOnUiThread {
-                                playButton?.text = "جارٍ التقاط البث..."
-                            }
-                        }
-
                         // Dispatch a real Android touch sequence to the WebView so players
                         // that reject synthetic JavaScript clicks can still receive a trusted tap.
                         @JavascriptInterface

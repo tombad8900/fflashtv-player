@@ -74,3 +74,10 @@
 - MPV strict mode routes playback through LocalStreamProxy. The proxy rewrites HLS playlists and child URI references, but it does not rewrite DASH MPD manifests, does not forward client Range headers, and does not preserve all upstream response headers/status metadata. Do not claim strict-proxy DASH or byte-range seeking is complete.
 - Recovery classifies broad parsing/IO/DRM categories and uses a bounded linear delay, but does not parse HTTP status codes or Retry-After into a provider-aware policy. Do not claim Retry-After support.
 - Current source inspection is static. A successful Termux build and device playback test are still required; the user has not yet tested the latest APK.
+
+
+## Source WebView exit and capture UI fix (2026-11-21)
+- The full-screen source WebView is hosted in an app-owned container with a compact top bar and close control; the oversized gold "تشغيل المصدر" overlay has been removed. Capture begins observing immediately, while the source's own player controls remain interactive.
+- Register an Activity OnBackPressedCallback while capture is active. Back/close removes the WebView container, stops and destroys the WebView, cancels the capture polling job, and resumes the suspended capture with a cancellation result instead of allowing the MainActivity to finish.
+- TmdbLibraryView restores the selected movie/server picker after capture cancellation and does not show a failure banner for an intentional exit.
+- Device validation is still required. Verify Back and the close control return to the movie/server picker, that no activity is finished, that capture still detects a user-started stream, and that success handoff removes the WebView cleanly.

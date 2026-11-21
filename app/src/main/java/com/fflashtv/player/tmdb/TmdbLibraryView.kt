@@ -1,6 +1,5 @@
 package com.fflashtv.player.tmdb
 
-import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -29,9 +28,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.fflashtv.player.model.ContentType
-import com.fflashtv.player.model.QualityOption
-import com.fflashtv.player.sources.ChannelItem
+import com.fflashtv.player.ui.PendingEmbedPlayback
+import com.fflashtv.player.ui.PendingEmbedSource
 import com.fflashtv.player.ui.PlayerLaunchBridge
 import kotlinx.coroutines.launch
 
@@ -41,7 +39,6 @@ fun TmdbLibraryView(
     serversStore: JsonServersStore
 ) {
     val context = LocalContext.current
-    val activity = context as? Activity
     val scope = rememberCoroutineScope()
 
     var selectedCategory by remember { mutableStateOf(TmdbCategory.POPULAR_MOVIES) }
@@ -56,8 +53,6 @@ fun TmdbLibraryView(
     var episodes by remember { mutableStateOf<List<TmdbEpisode>>(emptyList()) }
     var selectedEpisode by remember { mutableIntStateOf(1) }
 
-    var isSniffing by remember { mutableStateOf(false) }
-    var sniffStatus by remember { mutableStateOf<String?>(null) }
 
     val servers by serversStore.servers.collectAsState()
     val visibleServers = remember(servers) { serversStore.visibleEnabledServers() }
@@ -123,7 +118,6 @@ fun TmdbLibraryView(
                 Card(
                     modifier = Modifier.fillMaxWidth().clickable {
                         selectedItem = item
-                        sniffStatus = null
                         if (item.isTv) {
                             scope.launch {
                                 seasonCount = tmdbClient.fetchSeasonCount(item.id)
@@ -168,7 +162,7 @@ fun TmdbLibraryView(
     // EXO TV automatic source resolution: try enabled servers by configured priority.
     selectedItem?.let { item ->
         AlertDialog(
-            onDismissRequest = { if (!isSniffing) selectedItem = null },
+            onDismissRequest = { selectedItem = null },
             title = { Text(item.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -203,93 +197,42 @@ fun TmdbLibraryView(
                     }
                     Text(
                         if (visibleServers.isEmpty()) "لا توجد خوادم مفعّلة. أضف مصادر JSON من إعدادات المصادر."
-                        else "سيتم تجربة " + visibleServers.size + " خادم تلقائياً حسب الأولوية ثم فتح مشغل EXO مباشرة.",
+                        else "سيفتح مشغل EXO أولاً، ثم يجرب المصادر المفعّلة داخله حسب الأولوية.",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (visibleServers.isEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    sniffStatus?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, maxLines = 4)
-                    }
                 }
             },
             confirmButton = {
                 Button(
-                    enabled = visibleServers.isNotEmpty() && !isSniffing,
+                    enabled = visibleServers.isNotEmpty(),
                     onClick = {
-                        val hostActivity = activity ?: return@Button
-                        isSniffing = true
-                        selectedItem = null
-                        sniffStatus = "بدء البحث التلقائي عن مصدر صالح..."
-                        scope.launch {
-                            val imdbId = tmdbClient.fetchExternalImdbId(item.id, item.isTv)
-                            val failures = mutableListOf<String>()
-                            var launched = false
-                            for (server in visibleServers) {
-                                sniffStatus = "جاري فحص " + server.name + "..."
-                                val embedUrl = serversStore.buildEmbedUrl(
-                                    server, item.id, imdbId, item.isTv, selectedSeason, selectedEpisode
-                                )
-                                val result = ExoWebViewResolver.capture(hostActivity, embedUrl, server.headers)
-                                val sniffed = result.getOrNull()
-                                if (sniffed == null) {
-                                    failures += server.name + ": " + (result.exceptionOrNull()?.message ?: "لم يتم التقاط رابط")
-                                    continue
-                                }
-                                val displayTitle = if (item.isTv) {
-                                    item.title + " - S" + selectedSeason + "E" + selectedEpisode
-                                } else item.title
-                                val channel = ChannelItem(
-                                    id = "tmdb_" + item.id + "_" + selectedSeason + "_" + selectedEpisode,
-                                    name = displayTitle,
-                                    url = sniffed.streamUrl,
-                                    groupName = "TMDB",
-                                    headers = buildMap {
-                                        putAll(sniffed.requestHeaders)
-                                        if (sniffed.referer.isNotBlank()) put("Referer", sniffed.referer)
-                                        if (sniffed.userAgent.isNotBlank()) put("User-Agent", sniffed.userAgent)
-                                        if (sniffed.cookies.isNotBlank()) put("Cookie", sniffed.cookies)
-                                    },
-                                    subtitles = sniffed.subtitles,
-                                    contentType = ContentType.VOD,
-                                    qualities = sniffed.candidates.drop(1).mapIndexed { index, candidate ->
-                                        QualityOption(
-                                            label = "بديل EXO " + (index + 1) + " (" + candidate.type + ")",
-                                            url = candidate.url,
-                                            qualityType = candidate.type,
-                                            headers = candidate.headers
-                                        )
-                                    }
-                                )
-                                PlayerLaunchBridge.launch(context, listOf(channel), 0)
-                                launched = true
-                                break
-                            }
-                            isSniffing = false
-                            if (!launched) {
-                                sniffStatus = failures.joinToString("\n").ifBlank { "لم يتم العثور على مصدر صالح." }
-                                selectedItem = item
-                            } else {
-                                sniffStatus = null
-                            }
+                        val displayTitle = if (item.isTv) {
+                            item.title + " - S" + selectedSeason + "E" + selectedEpisode
+                        } else item.title
+                        val sources = visibleServers.map { server ->
+                            PendingEmbedSource(
+                                name = server.name,
+                                url = serversStore.buildEmbedUrl(
+                                    server, item.id, "", item.isTv, selectedSeason, selectedEpisode
+                                ),
+                                headers = server.headers
+                            )
                         }
+                        selectedItem = null
+                        PlayerLaunchBridge.launchEmbed(
+                            context,
+                            PendingEmbedPlayback(
+                                mediaId = "tmdb_" + item.id + "_" + selectedSeason + "_" + selectedEpisode,
+                                title = displayTitle,
+                                posterUrl = item.posterUrl,
+                                sources = sources
+                            )
+                        )
                     }
-                ) { Text("تشغيل تلقائي عبر EXO TV") }
+                ) { Text("فتح المشغل") }
             },
             dismissButton = { TextButton(onClick = { selectedItem = null }) { Text("إلغاء") } }
         )
     }
 
-    if (isSniffing) {
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("جاري تجهيز المشغل") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    Text(sniffStatus ?: "جاري البحث عن رابط البث...")
-                }
-            },
-            confirmButton = {}
-        )
-    }
-}

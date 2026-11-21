@@ -1,0 +1,11 @@
+.class public interface abstract La4/g;
+.super Ljava/lang/Object;
+.source "r8-map-id-8faea4a5be425bb722944ed96530d565bd9b44cd96e799337f2387ac99465617"
+
+
+# virtual methods
+.method public abstract b(Ly3/e;Ljava/lang/Object;Lcom/bumptech/glide/load/data/e;ILy3/e;)V
+.end method
+
+.method public abstract c(Ly3/e;Ljava/lang/Exception;Lcom/bumptech/glide/load/data/e;I)V
+.end method

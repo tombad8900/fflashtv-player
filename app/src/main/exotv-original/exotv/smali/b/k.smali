@@ -1,0 +1,235 @@
+.class public final Lb/k;
+.super Lz6/i;
+.source "r8-map-id-8faea4a5be425bb722944ed96530d565bd9b44cd96e799337f2387ac99465617"
+
+# interfaces
+.implements Ly6/a;
+
+
+# instance fields
+.field public final synthetic j:I
+
+.field public final synthetic k:Lh/i;
+
+
+# direct methods
+.method public synthetic constructor <init>(Lh/i;I)V
+    .locals 0
+
+    .line 1
+    iput p2, p0, Lb/k;->j:I
+
+    .line 2
+    .line 3
+    iput-object p1, p0, Lb/k;->k:Lh/i;
+
+    .line 4
+    .line 5
+    const/4 p1, 0x0
+
+    .line 6
+    invoke-direct {p0, p1}, Lz6/i;-><init>(I)V
+
+    .line 7
+    .line 8
+    .line 9
+    return-void
+.end method
+
+
+# virtual methods
+.method public final invoke()Ljava/lang/Object;
+    .locals 5
+
+    .line 1
+    iget v0, p0, Lb/k;->j:I
+
+    .line 2
+    .line 3
+    packed-switch v0, :pswitch_data_0
+
+    .line 4
+    .line 5
+    .line 6
+    new-instance v0, Lb/x;
+
+    .line 7
+    .line 8
+    new-instance v1, Lb/d;
+
+    .line 9
+    .line 10
+    const/4 v2, 0x1
+
+    .line 11
+    iget-object v3, p0, Lb/k;->k:Lh/i;
+
+    .line 12
+    .line 13
+    invoke-direct {v1, v3, v2}, Lb/d;-><init>(Lh/i;I)V
+
+    .line 14
+    .line 15
+    .line 16
+    invoke-direct {v0, v1}, Lb/x;-><init>(Ljava/lang/Runnable;)V
+
+    .line 17
+    .line 18
+    .line 19
+    sget v1, Landroid/os/Build$VERSION;->SDK_INT:I
+
+    .line 20
+    .line 21
+    const/16 v2, 0x21
+
+    .line 22
+    .line 23
+    if-lt v1, v2, :cond_1
+
+    .line 24
+    .line 25
+    invoke-static {}, Landroid/os/Looper;->myLooper()Landroid/os/Looper;
+
+    .line 26
+    .line 27
+    .line 28
+    move-result-object v1
+
+    .line 29
+    invoke-static {}, Landroid/os/Looper;->getMainLooper()Landroid/os/Looper;
+
+    .line 30
+    .line 31
+    .line 32
+    move-result-object v2
+
+    .line 33
+    invoke-static {v1, v2}, Lz6/h;->a(Ljava/lang/Object;Ljava/lang/Object;)Z
+
+    .line 34
+    .line 35
+    .line 36
+    move-result v1
+
+    .line 37
+    if-nez v1, :cond_0
+
+    .line 38
+    .line 39
+    new-instance v1, Landroid/os/Handler;
+
+    .line 40
+    .line 41
+    invoke-static {}, Landroid/os/Looper;->getMainLooper()Landroid/os/Looper;
+
+    .line 42
+    .line 43
+    .line 44
+    move-result-object v2
+
+    .line 45
+    invoke-direct {v1, v2}, Landroid/os/Handler;-><init>(Landroid/os/Looper;)V
+
+    .line 46
+    .line 47
+    .line 48
+    new-instance v2, Landroidx/media3/exoplayer/audio/i;
+
+    .line 49
+    .line 50
+    const/4 v4, 0x3
+
+    .line 51
+    invoke-direct {v2, v3, v4, v0}, Landroidx/media3/exoplayer/audio/i;-><init>(Ljava/lang/Object;ILjava/lang/Object;)V
+
+    .line 52
+    .line 53
+    .line 54
+    invoke-virtual {v1, v2}, Landroid/os/Handler;->post(Ljava/lang/Runnable;)Z
+
+    .line 55
+    .line 56
+    .line 57
+    goto :goto_0
+
+    .line 58
+    :cond_0
+    iget-object v1, v3, Lb0/e;->j:Landroidx/lifecycle/x;
+
+    .line 59
+    .line 60
+    new-instance v2, Lb/f;
+
+    .line 61
+    .line 62
+    invoke-direct {v2, v0, v3}, Lb/f;-><init>(Lb/x;Lh/i;)V
+
+    .line 63
+    .line 64
+    .line 65
+    invoke-virtual {v1, v2}, Landroidx/lifecycle/x;->a(Landroidx/lifecycle/u;)V
+
+    .line 66
+    .line 67
+    .line 68
+    :cond_1
+    :goto_0
+    return-object v0
+
+    .line 69
+    :pswitch_0
+    new-instance v0, Lb/n;
+
+    .line 70
+    .line 71
+    iget-object v1, p0, Lb/k;->k:Lh/i;
+
+    .line 72
+    .line 73
+    iget-object v2, v1, Lb/l;->o:Lb/i;
+
+    .line 74
+    .line 75
+    new-instance v3, Lb/k;
+
+    .line 76
+    .line 77
+    const/4 v4, 0x0
+
+    .line 78
+    invoke-direct {v3, v1, v4}, Lb/k;-><init>(Lh/i;I)V
+
+    .line 79
+    .line 80
+    .line 81
+    invoke-direct {v0, v2, v3}, Lb/n;-><init>(Ljava/util/concurrent/Executor;Lb/k;)V
+
+    .line 82
+    .line 83
+    .line 84
+    return-object v0
+
+    .line 85
+    :pswitch_1
+    iget-object v0, p0, Lb/k;->k:Lh/i;
+
+    .line 86
+    .line 87
+    invoke-virtual {v0}, Lb/l;->reportFullyDrawn()V
+
+    .line 88
+    .line 89
+    .line 90
+    sget-object v0, Ll6/j;->a:Ll6/j;
+
+    .line 91
+    .line 92
+    return-object v0
+
+    .line 93
+    :pswitch_data_0
+    .packed-switch 0x0
+        :pswitch_1
+        :pswitch_0
+    .end packed-switch
+.end method

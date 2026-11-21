@@ -1,0 +1,139 @@
+.class public final Lp4/b;
+.super Ljava/lang/Object;
+.source "r8-map-id-8faea4a5be425bb722944ed96530d565bd9b44cd96e799337f2387ac99465617"
+
+
+# static fields
+.field public static final c:La4/d0;
+
+
+# instance fields
+.field public final a:Lp/e;
+
+.field public final b:Ljava/util/concurrent/atomic/AtomicReference;
+
+
+# direct methods
+.method static constructor <clinit>()V
+    .locals 8
+
+    .line 1
+    new-instance v0, La4/d0;
+
+    .line 2
+    .line 3
+    new-instance v1, La4/m;
+
+    .line 4
+    .line 5
+    sget-object v5, Ljava/util/Collections;->EMPTY_LIST:Ljava/util/List;
+
+    .line 6
+    .line 7
+    new-instance v6, Lm4/d;
+
+    .line 8
+    .line 9
+    const/4 v2, 0x0
+
+    .line 10
+    invoke-direct {v6, v2}, Lm4/d;-><init>(I)V
+
+    .line 11
+    .line 12
+    .line 13
+    const/4 v7, 0x0
+
+    .line 14
+    const-class v2, Ljava/lang/Object;
+
+    .line 15
+    .line 16
+    const-class v3, Ljava/lang/Object;
+
+    .line 17
+    .line 18
+    const-class v4, Ljava/lang/Object;
+
+    .line 19
+    .line 20
+    invoke-direct/range {v1 .. v7}, La4/m;-><init>(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/util/List;Lm4/a;Ll0/b;)V
+
+    .line 21
+    .line 22
+    .line 23
+    invoke-static {v1}, Ljava/util/Collections;->singletonList(Ljava/lang/Object;)Ljava/util/List;
+
+    .line 24
+    .line 25
+    .line 26
+    move-result-object v4
+
+    .line 27
+    const/4 v5, 0x0
+
+    .line 28
+    const-class v1, Ljava/lang/Object;
+
+    .line 29
+    .line 30
+    const-class v2, Ljava/lang/Object;
+
+    .line 31
+    .line 32
+    const-class v3, Ljava/lang/Object;
+
+    .line 33
+    .line 34
+    invoke-direct/range {v0 .. v5}, La4/d0;-><init>(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/util/List;Ll0/b;)V
+
+    .line 35
+    .line 36
+    .line 37
+    sput-object v0, Lp4/b;->c:La4/d0;
+
+    .line 38
+    .line 39
+    return-void
+.end method
+
+.method public constructor <init>()V
+    .locals 2
+
+    .line 1
+    invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+
+    .line 2
+    .line 3
+    .line 4
+    new-instance v0, Lp/e;
+
+    .line 5
+    .line 6
+    const/4 v1, 0x0
+
+    .line 7
+    invoke-direct {v0, v1}, Lp/k;-><init>(I)V
+
+    .line 8
+    .line 9
+    .line 10
+    iput-object v0, p0, Lp4/b;->a:Lp/e;
+
+    .line 11
+    .line 12
+    new-instance v0, Ljava/util/concurrent/atomic/AtomicReference;
+
+    .line 13
+    .line 14
+    invoke-direct {v0}, Ljava/util/concurrent/atomic/AtomicReference;-><init>()V
+
+    .line 15
+    .line 16
+    .line 17
+    iput-object v0, p0, Lp4/b;->b:Ljava/util/concurrent/atomic/AtomicReference;
+
+    .line 18
+    .line 19
+    return-void
+.end method

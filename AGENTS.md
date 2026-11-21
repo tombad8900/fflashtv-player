@@ -28,14 +28,15 @@
 - Known ad hosts/paths must be filtered without blocking stream manifests, segments, or subtitles.
 
 ## Brave ad-block integration
-- The user's existing STAR project is at `~/STAR`; its browser integration is `app/src/main/java/com/lagradost/cloudstream3/features/browser/BrowserScreen.kt`.
-- STAR uses the native `org.mlm.adblock.AdblockEngine` wrapper with `libadblock_ffi.so`; this is bundled from the APK/source, not fetched as a Maven dependency.
-- STAR assets include `app/src/main/assets/adblock/initial_filters.txt`, `resources.json`, and eight lists under `assets/adblock/lists/`:
-  `brave-android-specific.txt`, `brave-specific.txt`, `brave-unbreak.txt`, `easylist.txt`, `easyprivacy.txt`, `liste-ar.txt`, `peter-lowe.txt`, `ublock-filters.txt`.
-- Native library ABI folders in STAR: `app/src/main/jniLibs/{arm64-v8a,armeabi-v7a,x86,x86_64}/libadblock_ffi.so`.
-- Do not replace that engine with a domain-only parser or claim full ABP compatibility from a host list.
-- The STAR working tree is on the user's Termux device and is not directly readable through this repository connection. Obtain the exact files/binaries before porting; do not substitute unrelated implementations.
-- Filter updates should be versioned, cached locally, and applied atomically; retain the last known-good lists when an update fails.
+- The original STAR implementation was supplied in `STAR-Brave-Integration.zip` and reviewed. Its native engine is `org.mlm.adblock.AdblockEngine`, backed by `libadblock_ffi.so`; it is not a Maven dependency.
+- Source wrappers now live in FFlashTV under `app/src/main/java/org/mlm/adblock/`: `AdblockEngine.java`, `BlockDecision.java`, and `RequestTypeMapper.kt`. The app-facing manager/engine/settings are under `com/fflashtv/player/adblock/`.
+- The original filter manager defines eight source URLs and a manual refresh action. The bundled `initial_filters.txt` contains all eight named sections; the ZIP also contains a standalone `ublock-filters.txt` asset. Do not treat the absence of seven separate text files as missing list definitions.
+- FFlashTV's manager uses cached lists, then the standalone asset, then the matching section in `initial_filters.txt`; it validates downloaded content, writes through a temporary file, keeps a `.bak` copy of the previous cache, and rebuilds the native engine after manual refresh.
+- The native binaries and assets still must be copied from STAR into FFlashTV at `app/src/main/jniLibs/{arm64-v8a,armeabi-v7a}/libadblock_ffi.so` and `app/src/main/assets/adblock/{resources.json,initial_filters.txt,lists/ublock-filters.txt}`. The app ABI filters are arm64-v8a and armeabi-v7a.
+- The engine is initialized asynchronously when MainActivity opens. The settings card is in SourcesScreen and retains manual list selection/refresh; no automatic network refresh is claimed.
+- Brave filtering is connected to HiddenStreamSniffer's existing shouldInterceptRequest path. Known media/subtitle extensions and hosts discovered from captured playable resources bypass Brave filtering; the existing ad-host check remains for other requests.
+- This is network-request filtering only at present. The wrapper exposes redirect/rewrite fields but the app currently applies matched/exception decisions only; cosmetic filtering and scriptlet injection are not implemented.
+- Do not replace the native engine with a domain-only parser or claim full ABP/cosmetic compatibility.
 - Never block media or subtitle requests solely because they are cross-origin.
 
 ## Validation expectations
@@ -50,3 +51,8 @@
 - Subtitle discoveries reset the candidate quiet-period timer so late subtitle requests are less likely to be missed before handoff.
 - The app-owned Play overlay still targets recognized player controls; it must not click arbitrary page elements.
 - Brave engine port is not yet implemented in FFlashTV. The exact STAR native wrapper, ABI libraries, and asset files must be obtained from the STAR working tree before integration; do not fabricate or substitute them.
+
+
+## Brave integration status (2026-11-21)
+- Source-code port and WebView request interception have been committed, but native binaries/assets have not yet been copied into this repository and no Android build has been run for this integration.
+- Do not report Brave as operational until the two ARM native libraries and required assets are present, the app builds, and a device test confirms native initialization and request decisions.

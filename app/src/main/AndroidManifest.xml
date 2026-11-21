@@ -32,5 +32,11 @@
             android:launchMode="singleTask"
             android:supportsPictureInPicture="true"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboardHidden" />
+        <activity
+            android:name=".ui.ExoTvPlayerActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:supportsPictureInPicture="true"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboardHidden" />
     </application>
 </manifest>

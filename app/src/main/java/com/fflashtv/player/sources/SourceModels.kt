@@ -1,5 +1,6 @@
 package com.fflashtv.player.sources
 
+import com.fflashtv.player.model.BackupSource
 import com.fflashtv.player.model.ContentType
 import com.fflashtv.player.model.DrmConfig
 import com.fflashtv.player.model.PlaybackInput
@@ -32,7 +33,8 @@ data class ChannelItem(
     val contentType: ContentType = ContentType.LIVE,
     val metadata: Map<String, String> = emptyMap(),
     val subtitles: List<String> = emptyList(),
-    val qualities: List<QualityOption> = emptyList()
+    val qualities: List<QualityOption> = emptyList(),
+    val backupSources: List<BackupSource> = emptyList()
 ) {
     fun toPlaybackInput(): PlaybackInput {
         return PlaybackInput(
@@ -45,7 +47,8 @@ data class ChannelItem(
             posterUrl = logoUrl.takeIf { it.isNotBlank() },
             extraInfo = metadata,
             subtitles = subtitles,
-            qualities = qualities
+            qualities = qualities,
+            backupSources = backupSources
         )
     }
 }

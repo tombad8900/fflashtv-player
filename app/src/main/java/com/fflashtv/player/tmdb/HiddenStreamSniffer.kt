@@ -224,8 +224,14 @@ object HiddenStreamSniffer {
 
                 try {
                     val wv = WebView(activity).apply {
+                        // The source page must remain visible and touchable: many embeds
+                        // only request the real stream after the user presses their own
+                        // play control, which cannot be triggered reliably by selectors.
                         visibility = View.VISIBLE
-                        alpha = 0f
+                        alpha = 1f
+                        isClickable = true
+                        isFocusable = true
+                        isFocusableInTouchMode = true
                         setLayerType(View.LAYER_TYPE_HARDWARE, null)
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
@@ -313,10 +319,9 @@ object HiddenStreamSniffer {
                     }
 
                     webView = wv
-                    wv.isClickable = false
-                    wv.isFocusable = false
-                    wv.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-                    wv.setOnTouchListener { _, _ -> true }
+                    // Keep the WebView interactive so the user can press play in custom
+                    // players. Popup windows remain blocked by WebChromeClient above.
+                    wv.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
                     root?.addView(wv, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
                     if (headers.isNotEmpty()) wv.loadUrl(embedUrl, headers) else wv.loadUrl(embedUrl)
 
@@ -358,25 +363,8 @@ object HiddenStreamSniffer {
                                     document.querySelectorAll('video track, track').forEach(function(t){
                                       if (t.src) CinemaCapture.subtitle(t.src);
                                     });
-                                    if (!window.__fftvPlayAttempted) {
-                                      var selectors = [
-                                        '.jw-icon-display', '.jw-display-icon-container',
-                                        '.vjs-big-play-button', '.plyr__control--overlaid',
-                                        '[data-plyr="play"]', '.play-btn',
-                                        '[aria-label="Play"]', '[title="Play"]',
-                                        'button[aria-label*="Play"]'
-                                      ];
-                                      var btn = null;
-                                      for (var i=0; i<selectors.length; i++) {
-                                        try { btn = document.querySelector(selectors[i]); } catch(e) {}
-                                        if (btn && btn.getClientRects().length) break;
-                                        btn = null;
-                                      }
-                                      if (btn) {
-                                        window.__fftvPlayAttempted = true;
-                                        btn.click();
-                                      }
-                                    }
+                                    // Do not guess which page button starts playback.
+                                    // The visible WebView lets the user activate the real player control.
                                   } catch(e) {}
                                 })();
                                 """.trimIndent(),

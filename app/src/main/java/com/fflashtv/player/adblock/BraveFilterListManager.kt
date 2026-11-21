@@ -56,8 +56,7 @@ object BraveFilterListManager {
         runCatching { context.assets.open(path).bufferedReader(Charsets.UTF_8).use { it.readText() } }
             .getOrDefault("")
 
-    private fun readBundledSection(context: Context, item: BraveFilterList): String {
-        val bundle = readAsset(context, "adblock/initial_filters.txt")
+    private fun readBundledSection(bundle: String, item: BraveFilterList): String {
         if (bundle.isBlank()) return ""
         val marker = "! ===== ${item.asset} ====="
         val markerStart = bundle.indexOf(marker)
@@ -74,13 +73,13 @@ object BraveFilterListManager {
             ?.takeIf { hasRules(it) }
     }
 
-    private fun listContent(context: Context, item: BraveFilterList, directory: File): String {
+    private fun listContent(context: Context, item: BraveFilterList, directory: File, bundledRules: String): String {
         val cached = File(directory, "${item.id}.txt")
         val backup = File(directory, "${item.id}.txt.bak")
         return readValidFile(cached)
             ?: readValidFile(backup)
             ?: readAsset(context, "adblock/lists/${item.asset}").takeIf { hasRules(it) }
-            ?: readBundledSection(context, item).takeIf { hasRules(it) }
+            ?: readBundledSection(bundledRules, item).takeIf { hasRules(it) }
             ?: ""
     }
 
@@ -88,10 +87,11 @@ object BraveFilterListManager {
         val selected = getEnabledIds(context)
         require(selected.isNotEmpty()) { "يجب تفعيل قائمة واحدة على الأقل" }
         val directory = File(context.filesDir, "brave_filters/lists")
+        val bundledRules = readAsset(context, "adblock/initial_filters.txt")
         val output = StringBuilder()
 
         lists.filter { it.id in selected }.forEach { item ->
-            val content = listContent(context, item, directory)
+            val content = listContent(context, item, directory, bundledRules)
             if (content.isNotBlank()) {
                 output.append("\n! ===== ").append(item.title).append(" =====\n")
                     .append(content).append('\n')

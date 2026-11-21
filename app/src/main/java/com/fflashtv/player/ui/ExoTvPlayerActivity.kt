@@ -33,9 +33,6 @@ class ExoTvPlayerActivity : ComponentActivity() {
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         viewModel.sessionManager.setFullscreen(true)
         applyFullscreen(true)
-        if (savedInstanceState == null) {
-            loadPendingPlayback()
-        }
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 ExoTvPlayerScreen(
@@ -49,6 +46,9 @@ class ExoTvPlayerActivity : ComponentActivity() {
                     onEnterPip = { enterPip() }
                 )
             }
+        }
+        if (savedInstanceState == null) {
+            loadPendingPlayback()
         }
     }
 

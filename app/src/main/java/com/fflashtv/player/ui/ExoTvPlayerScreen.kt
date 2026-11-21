@@ -33,6 +33,12 @@ fun ExoTvPlayerScreen(
     val history by viewModel.history.collectAsState()
     val formatMessage by viewModel.formatMessage.collectAsState()
     var controlsVisible by remember { mutableStateOf(true) }
+    var scrubbing by remember { mutableStateOf(false) }
+    var scrubPosition by remember(state.sessionId) { mutableFloatStateOf(state.positionMs.toFloat()) }
+
+    LaunchedEffect(state.positionMs, scrubbing) {
+        if (!scrubbing) scrubPosition = state.positionMs.toFloat()
+    }
 
     LaunchedEffect(controlsVisible, state.isPlaying, activeDialog, state.isInPip) {
         if (state.isInPip) controlsVisible = false
@@ -73,12 +79,7 @@ fun ExoTvPlayerScreen(
                 Text(state.title, color = Color.White, style = MaterialTheme.typography.titleLarge)
                 state.errorMessage?.let { Text(it, color = Color(0xFFFF7777), modifier = Modifier.padding(top = 8.dp)) }
                 Button(onClick = {
-                    viewModel.sessionManager.openSource(
-                        viewModel.sessionManager.state.value.let { current ->
-                            val input = PlayerLaunchBridge.pendingPlaylist.getOrNull(PlayerLaunchBridge.pendingStartIndex)
-                            input ?: return@Button
-                        }
-                    )
+                    viewModel.loadPlaylist(PlayerLaunchBridge.pendingPlaylist, PlayerLaunchBridge.pendingStartIndex)
                 }, modifier = Modifier.padding(top = 10.dp)) { Text("إعادة المحاولة") }
             }
         }
@@ -109,8 +110,12 @@ fun ExoTvPlayerScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(formatTime(state.positionMs), color = Color.White, style = MaterialTheme.typography.labelSmall)
                         Slider(
-                            value = state.positionMs.coerceIn(0L, state.durationMs).toFloat(),
-                            onValueChange = { viewModel.sessionManager.seekTo(it.toLong()) },
+                            value = scrubPosition.coerceIn(0f, state.durationMs.coerceAtLeast(1L).toFloat()),
+                            onValueChange = { scrubPosition = it; scrubbing = true },
+                            onValueChangeFinished = {
+                                viewModel.sessionManager.seekTo(scrubPosition.toLong())
+                                scrubbing = false
+                            },
                             valueRange = 0f..state.durationMs.coerceAtLeast(1L).toFloat(),
                             modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                         )

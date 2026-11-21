@@ -118,7 +118,7 @@ class LiveStreamManager {
     }
 }
 
-class MpvOrMedia3Engine(
+class ExoPlayerEngine(
     private val context: Context,
     private val dataSourceFactoryProvider: StreamDataSourceFactory,
     private val bufferManager: BufferManager,

@@ -45,6 +45,11 @@
 - Test at least: page-load capture, user-triggered playback, delayed HLS/DASH requests, subtitle capture, popup/ad blocking, and no-candidate timeout.
 - Treat DRM and MSE/Blob playback as fallback cases; do not claim their media URLs can always be extracted.
 
+## WebView threading fix (2026-11-21)
+- `shouldInterceptRequest` may execute on a WebView background thread. Never call WebView instance methods such as `getUrl()` from that callback.
+- `HiddenStreamSniffer` keeps the current top-level page URL in an `AtomicReference`, updated from UI-thread `onPageStarted`/`onPageFinished`, and reads only that snapshot during request interception.
+- After changing WebView callbacks, verify that no WebView instance method is accessed from `shouldInterceptRequest`; a successful build is still required before device validation.
+
 ## Latest capture refinement (2026-11-21)
 - A generic touch anywhere on the source WebView must not count as playback intent.
 - Manual touch intent is accepted only when the touch lands inside a recognized media/player region (video, JW Player, Video.js, Plyr, DPlayer, Artplayer, Flowplayer, or an explicitly marked player container).

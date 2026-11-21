@@ -17,9 +17,9 @@ import androidx.compose.material3.darkColorScheme
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.fflashtv.player.model.BackupSource
 import com.fflashtv.player.model.ContentType
 import com.fflashtv.player.model.PlaybackInput
-import com.fflashtv.player.model.QualityOption
 import com.fflashtv.player.tmdb.ExoWebViewResolver
 import kotlinx.coroutines.launch
 
@@ -88,12 +88,11 @@ class ExoTvPlayerActivity : ComponentActivity() {
                         title = embed.title,
                         contentType = ContentType.VOD,
                         headers = headers,
-                        qualities = sniffed.candidates.drop(1).mapIndexed { index, candidate ->
-                            QualityOption(
-                                label = "بديل EXO " + (index + 1) + " (" + candidate.type + ")",
+                        backupSources = sniffed.candidates.drop(1).mapIndexed { index, candidate ->
+                            BackupSource(
                                 url = candidate.url,
-                                qualityType = candidate.type,
-                                headers = candidate.headers
+                                headers = candidate.headers,
+                                name = "بديل EXO " + (index + 1) + " (" + candidate.type + ")"
                             )
                         },
                         posterUrl = embed.posterUrl.takeIf { it.isNotBlank() },

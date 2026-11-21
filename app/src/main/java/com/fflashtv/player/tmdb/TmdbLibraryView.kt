@@ -235,4 +235,4 @@ fun TmdbLibraryView(
             dismissButton = { TextButton(onClick = { selectedItem = null }) { Text("إلغاء") } }
         )
     }
-
+}

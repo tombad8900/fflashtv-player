@@ -65,6 +65,7 @@ class ExoTvPlayerActivity : ComponentActivity() {
             return
         }
 
+        viewModel.sessionManager.setResolvingExternalSource(embed.title)
         lifecycleScope.launch {
             var lastError = "لم يتم العثور على مصدر صالح."
             for (source in embed.sources) {

@@ -71,7 +71,7 @@
 
 
 ## Official EXO TV-only launch migration
-- All app playback entry points must call `PlayerLaunchBridge.launch`; the bridge always opens `ExoTvPlayerActivity`. The legacy engine enum is retained only for source compatibility and must not restore player selection.
+- All app playback entry points must call `PlayerLaunchBridge.launch`; the bridge always opens `ExoTvPlayerActivity`. The launch bridge exposes no engine selector or engine parameter.
 - IPTV channel taps launch the EXO TV Activity directly without an engine chooser.
 - TMDB movie/episode playback automatically tries enabled JSON servers in configured priority order, captures the first usable stream with `ExoWebViewResolver`, and launches EXO TV directly. Do not add manual server or engine selection to the viewing flow.
 - Legacy Media3 and libmpv Activities, screens, engine sources, and the libmpv Gradle dependency have been removed. Keep EXO TV as the only playback presentation.

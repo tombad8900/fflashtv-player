@@ -113,7 +113,7 @@ object BraveFilterListManager {
                 stream.write(bytes)
                 stream.fd.sync()
             }
-            if (target.isFile && target.length() > 0L) {
+            if (readValidFile(target) != null) {
                 Files.copy(target.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING)
             }
             try {

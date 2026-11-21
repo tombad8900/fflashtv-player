@@ -4,7 +4,7 @@
 - App: FFlashTV Player
 - Repository: tombad8900/fflashtv-player
 - Package / namespace: com.fflashtv.player
-- Main stack: Kotlin, Jetpack Compose, Media3, libmpv, OkHttp.
+- Main stack: Kotlin, Jetpack Compose, AndroidX Media3 ExoPlayer, OkHttp.
 
 ## Build
 - The repository uses a system Gradle installation; there is no Gradle wrapper.
@@ -18,7 +18,7 @@
 - `ui/ExoTvPlayerActivity.kt` and `ui/ExoTvPlayerScreen.kt`: EXO-style Media3 player presentation.
 - `resolver/`: MIME probing and playback input parsing.
 - `network/`, `session/`, `recovery/`, `buffer/`, `netlimit/`: existing playback/network/session controls.
-- `mpv/` and `ui/Player*`: libmpv and standard Media3 playback paths.
+- `ui/ExoTvPlayerActivity.kt` and `ui/ExoTvPlayerScreen.kt`: the sole playback presentation; `core/ExoPlayerEngine` owns the Media3 ExoPlayer instance.
 
 ## EXO TV source resolver port
 - The old visible WebView sniffer has been removed. The only TMDB source-capture implementation is the Kotlin adaptation of EXO TV's `z4/e0`, `z4/b0`, `z4/d0`, `z4/c0`, and `z4/g0` flow.
@@ -35,9 +35,9 @@
 - DRM-protected MSE/Blob streams are not guaranteed to expose a reusable URL. Do not claim universal extraction.
 
 ## Player architecture and EXO player port
-- The standard Media3 player and libmpv remain separate existing playback paths.
+- The standard Media3 and libmpv player Activities and the libmpv dependency have been removed; only the EXO TV presentation remains.
 - EXO TV's inspected PlayerActivity also uses AndroidX Media3 ExoPlayer and PlayerView; it is not a third independent decoding engine. The EXO option is a distinct player presentation/session experience built over the existing Media3 session architecture.
-- Do not describe the three choices as three independent decoder engines. Keep the choices clearly named: standard Media3, libmpv, and EXO-style player.
+- There is one player presentation: EXO TV. Its decoder is AndroidX Media3 ExoPlayer.
 - The EXO presentation should preserve the reference's black full-screen video surface, title overlay, buffered/error states, bottom seek row, play/pause, mute, server/quality/subtitle/resize/close controls, and PiP/lifecycle behavior.
 - Keep playback headers and backup candidate headers scoped per URL. The session manager's quality selection path is the current handoff for alternatives; do not turn backups into playlist items.
 - The current EXO-style screen is a first implementation of the reference control layout, not yet a claim of complete feature parity with the original proprietary app. Continue porting only after inspecting the exact corresponding EXO methods and controls.
@@ -58,7 +58,7 @@
 - Review every changed file after editing.
 - Build the debug variant and report the actual result; do not equate a successful compile with successful stream extraction.
 - Resolver tests must cover initial page load, 250ms poll/event chain, one-shot play attempt, primary and iframe hops, delayed stream requests, candidate header/cookie export, subtitle capture, ad filtering exemptions, 403/410 expiry, rate limiting, exhausted source, stall, cancellation, timeout, and WebView cleanup.
-- Player tests must cover standard Media3, libmpv, and EXO-style Activity launch; candidate selection must retain its own headers and must not alter playlist navigation.
+- Player tests must cover EXO TV Activity launch; candidate selection must retain its own headers and must not alter playlist navigation.
 - Treat DRM and MSE/Blob playback as fallback cases; do not claim their media URLs can always be extracted.
 - A successful build does not establish runtime correctness. Device testing is still required for stream capture, playback, PiP, rotation, and Back behavior.
 
@@ -74,5 +74,5 @@
 - All app playback entry points must call `PlayerLaunchBridge.launch`; the bridge always opens `ExoTvPlayerActivity`. The legacy engine enum is retained only for source compatibility and must not restore player selection.
 - IPTV channel taps launch the EXO TV Activity directly without an engine chooser.
 - TMDB movie/episode playback automatically tries enabled JSON servers in configured priority order, captures the first usable stream with `ExoWebViewResolver`, and launches EXO TV directly. Do not add manual server or engine selection to the viewing flow.
-- Legacy Media3 and libmpv Activities remain in the source tree until EXO TV routing has passed device playback, navigation, PiP, subtitles, quality switching, and lifecycle tests. They are not valid launch targets.
+- Legacy Media3 and libmpv Activities, screens, engine sources, and the libmpv Gradle dependency have been removed. Keep EXO TV as the only playback presentation.
 - EXO TV here is the EXO-derived player presentation on AndroidX Media3; do not claim that the proprietary APK's complete binary/classes were transplanted from Smali.

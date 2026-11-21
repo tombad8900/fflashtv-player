@@ -147,7 +147,7 @@ object HiddenStreamSniffer {
         val isSegment = path.endsWith(".ts") || query.contains(".ts") || path.endsWith(".m4s") || query.contains(".m4s")
         if (isSegment) return null
 
-        val videoExts = listOf(".m3u8", ".mpd", ".mp4", ".mkv", ".webm")
+        val videoExts = listOf(".m3u8", ".mpd", ".mp4", ".m4v", ".mkv", ".webm", ".mov", ".flv", ".avi")
         val hasExt = videoExts.any { path.endsWith(it) || query.contains(it) }
         val videoKws = listOf("master.m3u8", "index.m3u8", "playlist.m3u8", "manifest", "hls", "dash", "stream", "video", "embed", "player")
         val hasKw = videoKws.any { it in path || it in query || it in full }
@@ -157,7 +157,12 @@ object HiddenStreamSniffer {
             val kind = when {
                 full.contains(".m3u8") || full.contains("hls") -> "HLS"
                 full.contains(".mpd") || full.contains("dash") -> "DASH"
-                full.contains(".mp4") -> "MP4"
+                full.contains(".mp4") || full.contains(".m4v") -> "MP4"
+                full.contains(".webm") -> "WEBM"
+                full.contains(".mkv") -> "MKV"
+                full.contains(".mov") -> "MOV"
+                full.contains(".flv") -> "FLV"
+                full.contains(".avi") -> "AVI"
                 else -> "VIDEO"
             }
             return ClassifiedResource(url, kind, true)
@@ -225,7 +230,6 @@ object HiddenStreamSniffer {
                 fun offerCandidate(url: String, kind: String, hdrs: Map<String, String>) {
                     if (done.get() || isAdUrl(url)) return
                     val item = classifyResource(url)?.takeIf { it.playable } ?: return
-                    if (candidates.any { it.url == item.url }) return
                     val allowed = setOf("user-agent", "referer", "origin", "cookie", "authorization", "accept")
                     val clean = hdrs.filterKeys { it.lowercase() in allowed }.toMutableMap()
                     if (clean.keys.none { it.equals("User-Agent", true) }) clean["User-Agent"] = BROWSER_UA
@@ -234,6 +238,27 @@ object HiddenStreamSniffer {
                         val cookie = runCatching { CookieManager.getInstance().getCookie(item.url) }.getOrNull()
                         if (!cookie.isNullOrBlank()) clean["Cookie"] = cookie
                     }
+
+                    // JavaScript discovery may precede the real request callback. Merge
+                    // later network headers into the existing URL instead of dropping them.
+                    val existingIndex = candidates.indexOfFirst { it.url == item.url }
+                    if (existingIndex >= 0) {
+                        val existing = candidates[existingIndex]
+                        val merged = existing.headers.toMutableMap()
+                        clean.forEach { (key, value) ->
+                            val oldKey = merged.keys.firstOrNull { it.equals(key, true) }
+                            val oldValue = oldKey?.let { merged[it] }.orEmpty()
+                            val isFallback = (key.equals("Referer", true) && oldValue == embedUrl) ||
+                                (key.equals("User-Agent", true) && oldValue == BROWSER_UA)
+                            if (oldKey == null || oldValue.isBlank() || isFallback) {
+                                if (oldKey != null) merged.remove(oldKey)
+                                merged[key] = value
+                            }
+                        }
+                        candidates[existingIndex] = existing.copy(headers = merged)
+                        return
+                    }
+
                     candidates.add(CapturedCandidate(item.url, item.kind.ifBlank { kind }, clean, scoreCandidate(item), android.os.SystemClock.elapsedRealtime()))
                     candidateCount.set(candidates.size)
                     lastCandidateAt.set(android.os.SystemClock.elapsedRealtime())
@@ -504,9 +529,35 @@ object HiddenStreamSniffer {
                                         if (u) try { CinemaCapture.onVideoFound(String(u)); } catch(e) {}
                                         return oldOpen.apply(this, arguments);
                                       };
+
+                                      // Observe media URLs assigned dynamically by player frameworks.
+                                      var mediaSrc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'src');
+                                      if (mediaSrc && mediaSrc.set && mediaSrc.get && mediaSrc.configurable) {
+                                        Object.defineProperty(HTMLMediaElement.prototype, 'src', {
+                                          configurable: true, enumerable: mediaSrc.enumerable,
+                                          get: function(){ return mediaSrc.get.call(this); },
+                                          set: function(v){
+                                            if (v) try { CinemaCapture.onVideoFound(new URL(String(v), document.baseURI).href); } catch(e) {}
+                                            return mediaSrc.set.call(this, v);
+                                          }
+                                        });
+                                      }
+                                      var oldSetAttribute = Element.prototype.setAttribute;
+                                      Element.prototype.setAttribute = function(name,value){
+                                        if (value && /^(src|data-src|data-hls|data-video)$/i.test(String(name))) {
+                                          try { CinemaCapture.onVideoFound(new URL(String(value), document.baseURI).href); } catch(e) {}
+                                        }
+                                        return oldSetAttribute.apply(this, arguments);
+                                      };
                                     }
                                     window.open = function(){ return null; };
-                                    var vids = document.querySelectorAll('video');
+                                    // Include resources loaded before polling and by player libraries.
+                                    try {
+                                      performance.getEntriesByType('resource').forEach(function(entry){
+                                        if (entry && entry.name) CinemaCapture.onVideoFound(entry.name);
+                                      });
+                                    } catch(e) {}
+                                    var vids = document.querySelectorAll('video, source');
                                     CinemaCapture.onVideoTagCount(vids.length);
                                     vids.forEach(function(v){
                                       var s = v.currentSrc || v.src;
@@ -517,6 +568,17 @@ object HiddenStreamSniffer {
                                     });
                                     document.querySelectorAll('video track, track').forEach(function(t){
                                       if (t.src) CinemaCapture.subtitle(t.src);
+                                    });
+                                    document.querySelectorAll('iframe').forEach(function(frame){
+                                      var frameUrl = frame.src || frame.getAttribute('data-src');
+                                      if (frameUrl) {
+                                        try {
+                                          var parsed = new URL(frameUrl, document.baseURI);
+                                          if (/\.(m3u8|mpd|mp4|m4v|mkv|webm)(?:[?#]|$)/i.test(parsed.href)) {
+                                            CinemaCapture.onVideoFound(parsed.href);
+                                          }
+                                        } catch(e) {}
+                                      }
                                     });
                                     // Strategy 6: inspect late-created controls after ad overlays are blocked.
                                     // Re-run the sequence on later polling ticks as players often mount asynchronously.

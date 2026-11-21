@@ -13,7 +13,7 @@
 
 ## Existing architecture
 - `tmdb/ExoWebViewResolver.kt`: EXO TV-derived hidden WebView resolver, event bridge, player-page hops, stream/subtitle discovery, cookie/header export, and bounded cleanup.
-- `tmdb/TmdbLibraryView.kt`: automatically tries enabled source servers by priority, captures a usable stream with ExoWebViewResolver, and launches EXO TV.
+- `tmdb/TmdbLibraryView.kt`: builds ordered embed requests from enabled source servers and launches EXO TV before any stream capture; resolution runs inside the player Activity.
 - `ui/PlayerLaunchBridge.kt`: normalizes ChannelItem playlists into PlaybackInput and dispatches only to ExoTvPlayerActivity.
 - `ui/ExoTvPlayerActivity.kt` and `ui/ExoTvPlayerScreen.kt`: EXO-style Media3 player presentation.
 - `resolver/`: MIME probing and playback input parsing.
@@ -99,3 +99,11 @@
 - The reference `activity_player.xml` is the layout baseline: black full-screen PlayerView, a compact title overlay, centered buffering/error overlays, bottom scrim with VOD seek row, and seven evenly distributed controls (play/pause, mute, servers, resize, subtitles when available, quality, close).
 - `ExoTvPlayerScreen.kt` now follows that reference control hierarchy rather than the previous oversized horizontally scrolling toolbar. Keep additional capabilities in contextual dialogs or secondary interactions; do not crowd the primary control row.
 - The imported JADX `PlayerActivity.java` is evidence for behavior and feature mapping, not a compilable Activity replacement. Continue implementing behavior against FFlashTV's existing Media3 session manager and its single registered player Activity; never add the reference app's duplicate AndroidX/Media3 source classes or package-level `R.java` to the build.
+
+
+## TMDB launch/session handoff
+- Selecting a TMDB movie or episode must open `ExoTvPlayerActivity` immediately. Do not call `ExoWebViewResolver.capture` from `TmdbLibraryView` or show a pre-player source-scanning dialog.
+- `PlayerLaunchBridge.launchEmbed` passes an ordered list of embed URLs and each server's own headers to the player. `ExoTvPlayerActivity` attaches the player UI first, then resolves candidates sequentially with the existing resolver.
+- The first successful capture becomes one VOD `PlaybackInput`; remaining captured URLs become server alternatives with their own request headers. They must not become playlist items or trigger automatic episode navigation.
+- Keep IPTV playlist launch unchanged through `PlayerLaunchBridge.launch`. Both launch paths must converge on the same EXO TV Activity and Media3 session manager.
+- If all embed sources fail, show the final resolver error and close the player; never silently leave a blank player or start resolution in the library screen.

@@ -5,11 +5,10 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
-import com.fflashtv.player.buffer.BufferManager
 import com.fflashtv.player.core.FormatSwitcher
 import com.fflashtv.player.core.LiveStreamManager
 import com.fflashtv.player.core.MediaItemFactory
-import com.fflashtv.player.core.ExoPlayerEngine
+import com.fflashtv.player.core.ExoTvOriginalPlayerEngine
 import com.fflashtv.player.core.PlayerController
 import com.fflashtv.player.drm.DrmManager
 import com.fflashtv.player.history.WatchHistoryRepository
@@ -22,7 +21,6 @@ import com.fflashtv.player.model.QualityOption
 import com.fflashtv.player.netlimit.ConnectionAuditLog
 import com.fflashtv.player.netlimit.ConnectionLimitManager
 import com.fflashtv.player.network.NetworkClient
-import com.fflashtv.player.network.StreamDataSourceFactory
 import com.fflashtv.player.recovery.RecoveryController
 import com.fflashtv.player.recovery.ErrorClassifier
 import com.fflashtv.player.recovery.ErrorCategory
@@ -103,12 +101,10 @@ class PlaybackSessionManager(
 
     private val limitManager = ConnectionLimitManager.get(appContext)
     private val networkClient = NetworkClient()
-    private val dataSourceFactory = StreamDataSourceFactory(networkClient)
     private val streamProbe = StreamProbe(networkClient)
-    private val bufferManager = BufferManager()
     private val drmManager = DrmManager()
     private val mediaItemFactory = MediaItemFactory(drmManager)
-    private val engine = ExoPlayerEngine(appContext, dataSourceFactory, bufferManager, drmManager)
+    private val engine = ExoTvOriginalPlayerEngine(appContext, drmManager)
     private val recoveryController = RecoveryController(scope)
     private val liveStreamManager = LiveStreamManager()
     val trackManager = TrackManager()
@@ -272,8 +268,8 @@ class PlaybackSessionManager(
         networkClient.headerStore.update(parsed.headers, parsed.userAgent)
         recoveryController.attachSession(sessionId, mimeType)
 
-        if (limitActive) ConnectionAuditLog.log("Media3", "Starting strict session: ${parsed.title}")
-        val player = engine.createOrReplacePlayer(parsed, mimeType, if (limitActive) limitManager.strictStreamClient else null)
+        if (limitActive) ConnectionAuditLog.log("EXO", "Starting single playback session: ${parsed.title}")
+        val player = engine.createOrReplacePlayer(parsed, mimeType)
         trackManager.applyPreferredAudioLanguages(player)
 
         val currentVol = _state.value.volume

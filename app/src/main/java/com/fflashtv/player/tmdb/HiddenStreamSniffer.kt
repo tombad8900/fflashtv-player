@@ -142,14 +142,14 @@ object HiddenStreamSniffer {
         activity: Activity,
         embedUrl: String,
         headers: Map<String, String> = emptyMap(),
-        timeoutMs: Long = 22_000L
+        timeoutMs: Long = 60_000L
     ): Result<SniffedStream> = withContext(Dispatchers.Main) {
         val visitedHosts = CopyOnWriteArrayList<String>()
         val pageLoaded = AtomicBoolean(false)
         val videoTagsFound = AtomicInteger(0)
         val jsErrorCount = AtomicInteger(0)
         val candidateCount = AtomicInteger(0)
-        val firstCandidateAt = AtomicLong(0L)
+        val lastCandidateAt = AtomicLong(0L)
 
         val result = withTimeoutOrNull(timeoutMs) {
             suspendCancellableCoroutine<SniffedStream?> { cont ->
@@ -196,7 +196,7 @@ object HiddenStreamSniffer {
                     }
                     candidates.add(CapturedCandidate(item.url, item.kind.ifBlank { kind }, clean, scoreCandidate(item), android.os.SystemClock.elapsedRealtime()))
                     candidateCount.set(candidates.size)
-                    firstCandidateAt.compareAndSet(0L, android.os.SystemClock.elapsedRealtime())
+                    lastCandidateAt.set(android.os.SystemClock.elapsedRealtime())
                 }
 
                 fun finishBest() {
@@ -328,7 +328,7 @@ object HiddenStreamSniffer {
                     pulseJob = CoroutineScope(Dispatchers.Main).launch {
                         while (isActive && !done.get()) {
                             delay(1_000L)
-                            if (candidates.isNotEmpty() && android.os.SystemClock.elapsedRealtime() - firstCandidateAt.get() >= 2_600L) {
+                            if (candidates.isNotEmpty() && android.os.SystemClock.elapsedRealtime() - lastCandidateAt.get() >= 6_500L) {
                                 finishBest()
                                 break
                             }
@@ -363,8 +363,128 @@ object HiddenStreamSniffer {
                                     document.querySelectorAll('video track, track').forEach(function(t){
                                       if (t.src) CinemaCapture.subtitle(t.src);
                                     });
-                                    // Do not guess which page button starts playback.
-                                    // The visible WebView lets the user activate the real player control.
+                                    // Multi-strategy playback activation. Only target recognizable player controls;
+                                    // never click arbitrary links or buttons that may be advertisements.
+                                    if (!window.__fftvAutoPlayState) {
+                                      window.__fftvAutoPlayState = { tick: 0, clicked: new WeakSet() };
+                                    }
+                                    var state = window.__fftvAutoPlayState;
+                                    state.tick++;
+
+                                    function visible(el) {
+                                      if (!el || !el.getBoundingClientRect) return false;
+                                      var r = el.getBoundingClientRect();
+                                      var st = getComputedStyle(el);
+                                      return r.width > 8 && r.height > 8 &&
+                                        st.display !== 'none' && st.visibility !== 'hidden' &&
+                                        Number(st.opacity || 1) > 0.05;
+                                    }
+                                    function looksLikeAd(el) {
+                                      var n = el;
+                                      for (var i = 0; n && i < 5; i++, n = n.parentElement) {
+                                        var marker = ((n.id || '') + ' ' + (n.className || '') + ' ' +
+                                          (n.getAttribute && (n.getAttribute('aria-label') || '') || '')).toLowerCase();
+                                        if (/(^|[ _-])(ad|ads|advert|banner|popup|popunder|sponsor)([ _-]|$)/.test(marker)) return true;
+                                      }
+                                      return false;
+                                    }
+                                    function activate(el) {
+                                      if (!visible(el) || looksLikeAd(el) || state.clicked.has(el)) return false;
+                                      state.clicked.add(el);
+                                      try {
+                                        var r = el.getBoundingClientRect();
+                                        var x = r.left + r.width / 2, y = r.top + r.height / 2;
+                                        ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(type) {
+                                          var C = type.indexOf('pointer') === 0 && window.PointerEvent ? PointerEvent : MouseEvent;
+                                          el.dispatchEvent(new C(type, {
+                                            bubbles: true, cancelable: true, view: window,
+                                            clientX: x, clientY: y, pointerType: 'touch'
+                                          }));
+                                        });
+                                        if (typeof el.click === 'function') el.click();
+                                        return true;
+                                      } catch(e) { return false; }
+                                    }
+
+                                    // Strategy 1: native HTML media API (gesture requirement is disabled in WebView).
+                                    document.querySelectorAll('video').forEach(function(video) {
+                                      try {
+                                        video.muted = true;
+                                        var p = video.play();
+                                        if (p && p.catch) p.catch(function(){});
+                                      } catch(e) {}
+                                    });
+
+                                    // Strategy 2: known player-specific play controls.
+                                    var playerSelectors = [
+                                      '.jw-icon-playback', '.jw-display-icon-container',
+                                      '.vjs-big-play-button', '.plyr__control--overlaid',
+                                      '[data-plyr="play"]', '.flowplayer .fp-play',
+                                      '.fp-ui .fp-play', '.dplayer-play-icon',
+                                      '.artplayer-play', '.video-js button[title*="Play" i]',
+                                      'button[aria-label*="play" i]', '[role="button"][aria-label*="play" i]',
+                                      '[title*="play" i]', '.play-button', '.play-btn',
+                                      '.btn-play', '.player-play', '.play-icon'
+                                    ];
+                                    var activated = false;
+                                    for (var si = 0; si < playerSelectors.length && !activated; si++) {
+                                      var nodes = document.querySelectorAll(playerSelectors[si]);
+                                      for (var ni = 0; ni < nodes.length && !activated; ni++) {
+                                        activated = activate(nodes[ni]);
+                                      }
+                                    }
+
+                                    // Strategy 3: semantic controls, in the page's language.
+                                    if (!activated && state.tick >= 2) {
+                                      var labels = /^(play|watch|start|continue|مشاهدة|شاهد|تشغيل|ابدأ|استمرار)(\\s|$)/i;
+                                      var controls = document.querySelectorAll('button,[role="button"],input[type="button"],input[type="submit"]');
+                                      for (var ci = 0; ci < controls.length && !activated; ci++) {
+                                        var el = controls[ci];
+                                        var label = ((el.innerText || el.value || '') + ' ' +
+                                          (el.getAttribute('aria-label') || '') + ' ' +
+                                          (el.getAttribute('title') || '')).trim();
+                                        if (labels.test(label)) activated = activate(el);
+                                      }
+                                    }
+
+                                    // Strategy 4: player overlays with recognizable class names (never generic page buttons).
+                                    if (!activated && state.tick >= 4) {
+                                      var overlays = document.querySelectorAll(
+                                        '[class*="play-overlay"],[class*="play_overlay"],[class*="playButton"],' +
+                                        '[class*="play-button"],[class*="playButton"],[id*="play-button"]'
+                                      );
+                                      for (var oi = 0; oi < overlays.length && !activated; oi++) {
+                                        activated = activate(overlays[oi]);
+                                      }
+                                    }
+
+                                    // Strategy 5: keyboard activation for a focused player surface.
+                                    if (!activated && state.tick === 6) {
+                                      var player = document.querySelector('video,[class*="player"],[id*="player"]');
+                                      if (player && visible(player)) {
+                                        try {
+                                          player.focus();
+                                          ['keydown','keyup'].forEach(function(type) {
+                                            player.dispatchEvent(new KeyboardEvent(type, {
+                                              key: ' ', code: 'Space', keyCode: 32, which: 32,
+                                              bubbles: true, cancelable: true
+                                            }));
+                                          });
+                                        } catch(e) {}
+                                      }
+                                    }
+
+                                    // Strategy 6: inspect late-created controls after ad overlays are blocked.
+                                    // Re-run the sequence on later polling ticks as players often mount asynchronously.
+                                    try {
+                                      document.querySelectorAll('video').forEach(function(video) {
+                                        var src = video.currentSrc || video.src;
+                                        if (src) CinemaCapture.onVideoFound(src);
+                                        video.querySelectorAll('source').forEach(function(source) {
+                                          if (source.src) CinemaCapture.onVideoFound(source.src);
+                                        });
+                                      });
+                                    } catch(e) {}
                                   } catch(e) {}
                                 })();
                                 """.trimIndent(),

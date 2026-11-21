@@ -43,3 +43,10 @@
 - Build the debug variant and report the actual result; do not equate a successful compile with successful stream extraction.
 - Test at least: page-load capture, user-triggered playback, delayed HLS/DASH requests, subtitle capture, popup/ad blocking, and no-candidate timeout.
 - Treat DRM and MSE/Blob playback as fallback cases; do not claim their media URLs can always be extracted.
+
+## Latest capture refinement (2026-11-21)
+- A generic touch anywhere on the source WebView must not count as playback intent.
+- Manual touch intent is accepted only when the touch lands inside a recognized media/player region (video, JW Player, Video.js, Plyr, DPlayer, Artplayer, Flowplayer, or an explicitly marked player container).
+- Subtitle discoveries reset the candidate quiet-period timer so late subtitle requests are less likely to be missed before handoff.
+- The app-owned Play overlay still targets recognized player controls; it must not click arbitrary page elements.
+- Brave engine port is not yet implemented in FFlashTV. The exact STAR native wrapper, ABI libraries, and asset files must be obtained from the STAR working tree before integration; do not fabricate or substitute them.

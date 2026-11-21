@@ -92,3 +92,10 @@
 - The workflow `.github/workflows/decompile-exotv-reference.yml` is manual (`workflow_dispatch`) and uses the repository secret `REFERENCE_REPO_TOKEN` for the source checkout.
 - Do not make the reference repository public merely to inspect it. If an Actions checkout is needed, use an appropriately scoped secret; never commit tokens or APK credentials.
 - The workflow uploads `exotv-original-apk-decompiled` containing Apktool resources/manifest and JADX Java output plus the original APK. Download and inspect the artifact before claiming a complete source port.
+
+
+## EXO reference import and UI parity follow-up
+- The decompiled reference snapshot is preserved under `app/src/main/exotv-original/` for analysis only. It is intentionally outside the Android source/resource source sets: JADX output contains decompiler artifacts, obfuscated app dependencies, framework/library classes, and generated resource IDs that cannot be compiled as a drop-in module.
+- The reference `activity_player.xml` is the layout baseline: black full-screen PlayerView, a compact title overlay, centered buffering/error overlays, bottom scrim with VOD seek row, and seven evenly distributed controls (play/pause, mute, servers, resize, subtitles when available, quality, close).
+- `ExoTvPlayerScreen.kt` now follows that reference control hierarchy rather than the previous oversized horizontally scrolling toolbar. Keep additional capabilities in contextual dialogs or secondary interactions; do not crowd the primary control row.
+- The imported JADX `PlayerActivity.java` is evidence for behavior and feature mapping, not a compilable Activity replacement. Continue implementing behavior against FFlashTV's existing Media3 session manager and its single registered player Activity; never add the reference app's duplicate AndroidX/Media3 source classes or package-level `R.java` to the build.

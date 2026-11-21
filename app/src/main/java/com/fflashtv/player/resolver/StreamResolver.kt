@@ -227,6 +227,7 @@ object PlaybackInputParser {
             resumePositionMs = if (isLive) 0L else input.resumePositionMs.coerceAtLeast(0L),
             playWhenReady = input.playWhenReady,
             qualities = input.qualities,
+            backupSources = input.backupSources,
             posterUrl = input.posterUrl,
             allowInsecureTls = input.allowInsecureTls,
             subtitles = input.subtitles

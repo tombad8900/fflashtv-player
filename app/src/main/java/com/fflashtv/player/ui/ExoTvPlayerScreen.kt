@@ -79,7 +79,7 @@ fun ExoTvPlayerScreen(
                 Text(state.title, color = Color.White, style = MaterialTheme.typography.titleLarge)
                 state.errorMessage?.let { Text(it, color = Color(0xFFFF7777), modifier = Modifier.padding(top = 8.dp)) }
                 Button(onClick = {
-                    viewModel.loadPlaylist(PlayerLaunchBridge.pendingPlaylist, PlayerLaunchBridge.pendingStartIndex)
+                    viewModel.retryCurrent()
                 }, modifier = Modifier.padding(top = 10.dp)) { Text("إعادة المحاولة") }
             }
         }

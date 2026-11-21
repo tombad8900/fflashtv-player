@@ -270,6 +270,7 @@ fun ExoTvPlayerScreen(
                 onVolumeChange = { viewModel.sessionManager.setVolume(it) },
                 onToggleMute = { viewModel.sessionManager.toggleMute() },
                 onSelectQuality = { viewModel.sessionManager.selectQuality(it) },
+                onSelectServer = { viewModel.sessionManager.selectServer(it) },
                 onPlaybackSpeedChange = { viewModel.setPlaybackSpeed(it) },
                 onAddSubtitle = { viewModel.addExternalSubtitle(it) },
                 onSelectTrack = { viewModel.selectTrack(it) },

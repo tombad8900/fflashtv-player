@@ -1,7 +1,6 @@
 package com.fflashtv.player.tmdb
 
 import android.annotation.SuppressLint
-import com.fflashtv.player.adblock.BraveAdBlockEngine
 import android.app.Activity
 import android.net.Uri
 import android.util.Base64
@@ -38,6 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.resume
+import com.fflashtv.player.adblock.BraveAdBlockEngine
 
 object HiddenStreamSniffer {
 
@@ -47,6 +47,7 @@ object HiddenStreamSniffer {
     private val ARABIC_SUB_REGEX = Regex("""[._/\-=](ar|ara|arabic)[._/\-=]""", RegexOption.IGNORE_CASE)
 
     private fun isProtectedPlaybackRequest(url: String, accept: String?): Boolean {
+        if (classifyResource(url) != null) return true
         val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return false
         val path = uri.encodedPath.orEmpty().lowercase()
         val query = uri.encodedQuery.orEmpty().lowercase()

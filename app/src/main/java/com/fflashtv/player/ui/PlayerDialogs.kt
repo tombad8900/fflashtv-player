@@ -45,6 +45,8 @@ fun PlayerDialogs(
     onVolumeChange: (Int) -> Unit,
     onToggleMute: () -> Unit,
     onSelectQuality: (QualityOption) -> Unit,
+    onPlaybackSpeedChange: (Float) -> Unit,
+    onAddSubtitle: (String) -> Unit,
     onSelectTrack: (TrackInfo) -> Unit,
     onDisableSubtitles: () -> Unit,
     onSwitchFormat: (String) -> Unit,
@@ -87,13 +89,13 @@ fun PlayerDialogs(
             )
         }
 
-        ActiveDialog.QUALITY -> {
+        ActiveDialog.SERVERS -> {
             AlertDialog(
                 onDismissRequest = onDismiss,
-                title = { Text("اختيار الجودة") },
+                title = { Text("السيرفرات والروابط البديلة") },
                 text = {
                     if (state.qualities.isEmpty()) {
-                        Text("لا توجد مصادر جودة إضافية لهذا الرابط.")
+                        Text("لا توجد سيرفرات أو روابط بديلة لهذا المصدر.")
                     } else {
                         Column {
                             state.qualities.forEach { q ->
@@ -120,7 +122,50 @@ fun PlayerDialogs(
             )
         }
 
+        ActiveDialog.QUALITY -> {
+            val videoTracks = state.tracks.filter { it.type == MediaTrackType.VIDEO }
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text("جودة الفيديو") },
+                text = {
+                    if (videoTracks.isEmpty()) Text("اختيار الجودة غير متاح؛ يعتمد ذلك على المسارات التي يرسلها المصدر.")
+                    else Column {
+                        videoTracks.forEach { track ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { onSelectTrack(track); onDismiss() }.padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(selected = track.isSelected, onClick = null)
+                                Text(track.label, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = onDismiss) { Text("إغلاق") } }
+            )
+        }
+
+        ActiveDialog.SPEED -> {
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text("سرعة التشغيل") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f).chunked(3).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                row.forEach { rate ->
+                                    FilterChip(selected = false, onClick = { onPlaybackSpeedChange(rate); onDismiss() }, label = { Text("${rate}x") })
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = onDismiss) { Text("إغلاق") } }
+            )
+        }
+
         ActiveDialog.TRACKS -> {
+            var subtitleUrl by remember(activeDialog) { mutableStateOf("") }
             AlertDialog(
                 onDismissRequest = onDismiss,
                 title = { Text("المسارات والترجمة") },
@@ -165,6 +210,7 @@ fun PlayerDialogs(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { onSelectTrack(t) }
+                                    .padding(vertical = 4.dp)
                                     .padding(vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -172,6 +218,18 @@ fun PlayerDialogs(
                                 Text(t.label, modifier = Modifier.padding(start = 8.dp))
                             }
                         }
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = subtitleUrl,
+                            onValueChange = { subtitleUrl = it },
+                            label = { Text("رابط ترجمة خارجي (SRT / VTT / ASS)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Button(
+                            enabled = subtitleUrl.startsWith("http://", true) || subtitleUrl.startsWith("https://", true),
+                            onClick = { onAddSubtitle(subtitleUrl.trim()); onDismiss() }
+                        ) { Text("إضافة الترجمة") }
 
                         if (videoTracks.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))

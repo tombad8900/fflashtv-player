@@ -76,37 +76,39 @@ enum class ExoTvResolverKind {
 }
 
 data class ExoTvChannel(
-    val id: String = "",
-    val idO: String = "",
-    val name: String = "",
-    val title: String = "",
-    val icon: String = "",
-    val type: String = "",
-    val catO: String = "",
-    val catRealName: String = "",
-    val chRealName: String = "",
-    val idGen: String = "",
-    val parent: String = "",
-    val server: String = "",
+    val id: String? = null,
+    val idO: String? = null,
+    val name: String? = null,
+    val title: String? = null,
+    val icon: String? = null,
+    val type: String? = null,
+    val catO: String? = null,
+    val catRealName: String? = null,
+    val chRealName: String? = null,
+    val idGen: String? = null,
+    val parent: String? = null,
+    val server: String? = null,
     val isSub: Boolean = false,
     val isBackup: Boolean = false,
     val backups: List<BackupSource> = emptyList(),
-    val xCatInfo: String = ""
+    val xCatInfo: String? = null
 ) {
-    val displayName: String get() = name.ifBlank { title }
+    val displayName: String get() = name?.takeIf { it.isNotBlank() } ?: title.orEmpty()
+
+    // Mirrors the original Channel.getResolverKind() precedence and null checks.
     val resolverKind: ExoTvResolverKind
         get() = when {
             isBackup && backups.isNotEmpty() -> ExoTvResolverKind.BACKUP
-            type.equals("ytv", true) || (catRealName.isNotBlank() && chRealName.isNotBlank()) -> ExoTvResolverKind.YTV
-            idO.isNotBlank() && catO.isNotBlank() -> ExoTvResolverKind.O
-            idGen.isNotBlank() && parent.isNotBlank() -> ExoTvResolverKind.GEN
+            type == "ytv" || (catRealName != null && chRealName != null) -> ExoTvResolverKind.YTV
+            idO != null && catO != null -> ExoTvResolverKind.O
+            idGen != null && parent != null -> ExoTvResolverKind.GEN
             else -> ExoTvResolverKind.DEFAULT
         }
 }
 
 data class ExoTvChannelCategory(
     val id: String,
-    val idO: String = "",
+    val idO: String? = null,
     val title: String = "",
     val channels: List<ExoTvChannel> = emptyList()
 )
@@ -161,18 +163,18 @@ class ExoTvCatalogRepository(
                 (0 until channelsArray.length()).mapNotNull { channelIndex ->
                     val item = channelsArray.optJSONObject(channelIndex) ?: return@mapNotNull null
                     ExoTvChannel(
-                        id = item.optString("id"),
-                        idO = item.optString("id_o"),
-                        name = item.optString("name"),
-                        title = item.optString("title"),
-                        icon = item.optString("icon"),
-                        type = item.optString("type"),
-                        catO = item.optString("cat_o"),
-                        catRealName = item.optString("cat_real_name"),
-                        chRealName = item.optString("ch_real_name"),
-                        idGen = item.optString("id_gen"),
-                        parent = item.optString("parent"),
-                        server = item.optString("server"),
+                        id = item.optNullableString("id"),
+                        idO = item.optNullableString("id_o"),
+                        name = item.optNullableString("name"),
+                        title = item.optNullableString("title"),
+                        icon = item.optNullableString("icon"),
+                        type = item.optNullableString("type"),
+                        catO = item.optNullableString("cat_o"),
+                        catRealName = item.optNullableString("cat_real_name"),
+                        chRealName = item.optNullableString("ch_real_name"),
+                        idGen = item.optNullableString("id_gen"),
+                        parent = item.optNullableString("parent"),
+                        server = item.optNullableString("server"),
                         isSub = item.optBoolean("isSub"),
                         isBackup = item.optBoolean("isBackup"),
                         backups = parseBackups(item.optJSONArray("backupURLs")),
@@ -180,10 +182,10 @@ class ExoTvCatalogRepository(
                     )
                 }
             }
-            val id = category.optString("id").ifBlank { category.optString("id_o") }
+            val id = category.optNullableString("id") ?: category.optNullableString("id_o").orEmpty()
             ExoTvChannelCategory(
                 id = id,
-                idO = category.optString("id_o"),
+                idO = category.optNullableString("id_o"),
                 title = category.optString("title"),
                 channels = channels
             )
@@ -242,3 +244,6 @@ private fun JSONObject?.toStringMap(): Map<String, String> {
     }
     return result
 }
+
+private fun JSONObject.optNullableString(name: String): String? =
+    if (isNull(name)) null else optString(name)

@@ -16,6 +16,12 @@ data class DrmConfig(
     val licenseHeaders: Map<String, String> = emptyMap()
 )
 
+data class BackupSource(
+    val url: String,
+    val headers: Map<String, String> = emptyMap(),
+    val name: String? = null
+)
+
 data class QualityOption(
     val label: String,
     val url: String,
@@ -37,6 +43,7 @@ data class PlaybackInput(
     val headers: Map<String, String> = emptyMap(),
     val drmConfig: DrmConfig = DrmConfig(),
     val qualities: List<QualityOption> = emptyList(),
+    val backupSources: List<BackupSource> = emptyList(),
     val posterUrl: String? = null,
     val allowInsecureTls: Boolean = false,
     val extraInfo: Map<String, String> = emptyMap(),
@@ -57,6 +64,7 @@ data class ParsedPlayback(
     val resumePositionMs: Long,
     val playWhenReady: Boolean,
     val qualities: List<QualityOption>,
+    val backupSources: List<BackupSource>,
     val posterUrl: String?,
     val allowInsecureTls: Boolean,
     val subtitles: List<String> = emptyList()

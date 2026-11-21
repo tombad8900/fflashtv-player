@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.fflashtv.player.model.BackupSource
 import com.fflashtv.player.model.ContentType
 import com.fflashtv.player.model.DrmType
 import com.fflashtv.player.model.HistoryEntry
@@ -45,6 +46,7 @@ fun PlayerDialogs(
     onVolumeChange: (Int) -> Unit,
     onToggleMute: () -> Unit,
     onSelectQuality: (QualityOption) -> Unit,
+    onSelectServer: (BackupSource) -> Unit,
     onPlaybackSpeedChange: (Float) -> Unit,
     onAddSubtitle: (String) -> Result<Unit>,
     onSelectTrack: (TrackInfo) -> Unit,
@@ -94,23 +96,24 @@ fun PlayerDialogs(
                 onDismissRequest = onDismiss,
                 title = { Text("السيرفرات والروابط البديلة") },
                 text = {
-                    if (state.qualities.isEmpty()) {
+                    if (state.servers.isEmpty()) {
                         Text("لا توجد سيرفرات أو روابط بديلة لهذا المصدر.")
                     } else {
-                        Column {
-                            state.qualities.forEach { q ->
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                            state.servers.forEachIndexed { index, server ->
+                                val label = server.name?.takeIf { it.isNotBlank() } ?: ("السيرفر " + (index + 1))
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
-                                            onSelectQuality(q)
+                                            onSelectServer(server)
                                             onDismiss()
                                         }
                                         .padding(vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    RadioButton(selected = q.isSelected, onClick = null)
-                                    Text(q.label, modifier = Modifier.padding(start = 8.dp))
+                                    RadioButton(selected = server.url == state.selectedServerUrl, onClick = null)
+                                    Text(label, modifier = Modifier.padding(start = 8.dp))
                                 }
                             }
                         }

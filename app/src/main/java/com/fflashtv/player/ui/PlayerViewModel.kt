@@ -35,6 +35,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _formatMessage = MutableStateFlow<String?>(null)
     val formatMessage: StateFlow<String?> = _formatMessage.asStateFlow()
 
+    fun retryCurrent() {
+        sessionManager.retryCurrent()
+    }
+
     fun loadPlaylist(items: List<PlaybackInput>, startIndex: Int) {
         if (items.isNotEmpty()) {
             sessionManager.setPlaylist(items, startIndex)

@@ -68,3 +68,11 @@
 - The shared player bridge owns the `MEDIA3`, `LIBMPV`, and `EXOTV` presentation selection.
 - Hidden WebView resolver code using visibility/layer constants must import `android.view.View`.
 - Always run `:app:assembleDebug` after Kotlin integration changes; Termux builds may emit non-fatal NDK `llvm-strip` host-binary warnings while packaging unstripped native libraries.
+
+
+## Official EXO TV-only launch migration
+- All app playback entry points must call `PlayerLaunchBridge.launch`; the bridge always opens `ExoTvPlayerActivity`. The legacy engine enum is retained only for source compatibility and must not restore player selection.
+- IPTV channel taps launch the EXO TV Activity directly without an engine chooser.
+- TMDB movie/episode playback automatically tries enabled JSON servers in configured priority order, captures the first usable stream with `ExoWebViewResolver`, and launches EXO TV directly. Do not add manual server or engine selection to the viewing flow.
+- Legacy Media3 and libmpv Activities remain in the source tree until EXO TV routing has passed device playback, navigation, PiP, subtitles, quality switching, and lifecycle tests. They are not valid launch targets.
+- EXO TV here is the EXO-derived player presentation on AndroidX Media3; do not claim that the proprietary APK's complete binary/classes were transplanted from Smali.

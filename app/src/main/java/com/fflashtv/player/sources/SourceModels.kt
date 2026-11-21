@@ -3,6 +3,7 @@ package com.fflashtv.player.sources
 import com.fflashtv.player.model.ContentType
 import com.fflashtv.player.model.DrmConfig
 import com.fflashtv.player.model.PlaybackInput
+import com.fflashtv.player.model.QualityOption
 
 enum class SourceType {
     M3U_URL,
@@ -30,7 +31,8 @@ data class ChannelItem(
     val drmConfig: DrmConfig = DrmConfig(),
     val contentType: ContentType = ContentType.LIVE,
     val metadata: Map<String, String> = emptyMap(),
-    val subtitles: List<String> = emptyList()
+    val subtitles: List<String> = emptyList(),
+    val qualities: List<QualityOption> = emptyList()
 ) {
     fun toPlaybackInput(): PlaybackInput {
         return PlaybackInput(
@@ -42,7 +44,8 @@ data class ChannelItem(
             drmConfig = drmConfig,
             posterUrl = logoUrl.takeIf { it.isNotBlank() },
             extraInfo = metadata,
-            subtitles = subtitles
+            subtitles = subtitles,
+            qualities = qualities
         )
     }
 }

@@ -39,15 +39,6 @@ object HiddenStreamSniffer {
 
     private val ARABIC_SUB_REGEX = Regex("""[._/\-=](ar|ara|arabic)[._/\-=]""", RegexOption.IGNORE_CASE)
 
-    private val adKeywords = listOf(
-        "doubleclick", "googlesyndication", "adsterra", "popads", "propellerads",
-        "exoclick", "juicyads", "taboola", "outbrain", "mgid", "clickadu",
-        "hilltopads", "adcash", "bet365", "1xbet", "yandex.ru/ads",
-        "ads.", "/ads/", "adservice", "popcash", "popunder", "onclickads",
-        "trafficjunky", "tsyndicate", "acscdn", "whos.amung.us", "mc.yandex",
-        "histats", "google-analytics", "googletagmanager", "cloudflareinsights"
-    )
-
     private fun isAdUrl(url: String): Boolean {
         val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return false
         val host = uri.host?.lowercase().orEmpty()

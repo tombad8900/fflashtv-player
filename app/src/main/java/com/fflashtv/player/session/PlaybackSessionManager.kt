@@ -194,9 +194,9 @@ class PlaybackSessionManager(
         activeListener?.let { l -> engine.exoPlayer?.removeListener(l) }
         activeListener = null
         engine.release()
-        if (limitManager.isEnabled) limitManager.terminateActiveConnections("Media3 release")
+        if (limitManager.isEnabled) limitManager.terminateActiveConnections("EXO player release")
         if (limitActive) {
-            limitManager.terminateActiveConnections("Media3 channel switch")
+            limitManager.terminateActiveConnections("EXO channel switch")
         }
         _playerFlow.value = null
         networkClient.headerStore.clear()

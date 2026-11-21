@@ -5,8 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.nativeKeyEvent
-import android.view.KeyEvent as AndroidKeyEvent
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.type
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.focus.FocusRequester
@@ -73,40 +73,40 @@ fun ExoTvPlayerScreen(
         Modifier.fillMaxSize().background(Color.Black).focusRequester(playerFocusRequester).focusable()
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                when (event.nativeKeyEvent.keyCode) {
-                    AndroidKeyEvent.KEYCODE_DPAD_LEFT -> {
+                when (event.key) {
+                    Key.DirectionLeft -> {
                         viewModel.sessionManager.seekBackward(); controlsVisible = true; true
                     }
-                    AndroidKeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    Key.DirectionRight -> {
                         viewModel.sessionManager.seekForward(); controlsVisible = true; true
                     }
-                    AndroidKeyEvent.KEYCODE_DPAD_UP, AndroidKeyEvent.KEYCODE_DPAD_DOWN -> {
+                    Key.DirectionUp, Key.DirectionDown -> {
                         controlsVisible = true; true
                     }
-                    AndroidKeyEvent.KEYCODE_DPAD_CENTER, AndroidKeyEvent.KEYCODE_ENTER, AndroidKeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
                         if (controlsVisible) {
                             if (state.isPlaying) viewModel.sessionManager.pause() else viewModel.sessionManager.play()
                         } else controlsVisible = true
                         true
                     }
-                    AndroidKeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                    Key.MediaPlayPause -> {
                         if (state.isPlaying) viewModel.sessionManager.pause() else viewModel.sessionManager.play()
                         controlsVisible = true; true
                     }
-                    AndroidKeyEvent.KEYCODE_MEDIA_PLAY -> { viewModel.sessionManager.play(); controlsVisible = true; true }
-                    AndroidKeyEvent.KEYCODE_MEDIA_PAUSE -> { viewModel.sessionManager.pause(); controlsVisible = true; true }
-                    AndroidKeyEvent.KEYCODE_MEDIA_NEXT -> {
+                    Key.MediaPlay -> { viewModel.sessionManager.play(); controlsVisible = true; true }
+                    Key.MediaPause -> { viewModel.sessionManager.pause(); controlsVisible = true; true }
+                    Key.MediaNext -> {
                         if (state.nextAvailable) viewModel.sessionManager.playNext()
                         controlsVisible = true; true
                     }
-                    AndroidKeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+                    Key.MediaPrevious -> {
                         if (state.previousAvailable) viewModel.sessionManager.playPrevious()
                         controlsVisible = true; true
                     }
-                    AndroidKeyEvent.KEYCODE_VOLUME_UP -> {
+                    Key.VolumeUp -> {
                         viewModel.sessionManager.setVolume((state.volume + 5).coerceAtMost(100)); true
                     }
-                    AndroidKeyEvent.KEYCODE_VOLUME_DOWN -> {
+                    Key.VolumeDown -> {
                         viewModel.sessionManager.setVolume((state.volume - 5).coerceAtLeast(0)); true
                     }
                     else -> false

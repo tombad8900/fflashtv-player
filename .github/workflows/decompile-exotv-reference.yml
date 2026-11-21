@@ -59,4 +59,4 @@ jobs:
           path: extracted/
           if-no-files-found: error
           compression-level: 6
-          retention-days: 14
+          retention-days: 13

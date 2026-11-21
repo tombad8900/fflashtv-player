@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fflashtv.player.sources.SourceConfig
+import com.fflashtv.player.adblock.BraveAdBlockSettingsCard
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.fflashtv.player.sources.SourceType
 import com.fflashtv.player.tmdb.JsonServersStore
@@ -203,6 +204,10 @@ fun SourcesScreen(ui: LibraryUiState, viewModel: LibraryViewModel) {
                         }
                     }
                 }
+            }
+
+            item {
+                BraveAdBlockSettingsCard()
             }
         }
     }

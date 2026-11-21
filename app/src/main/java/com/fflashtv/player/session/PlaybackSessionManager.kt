@@ -69,6 +69,7 @@ data class PlaybackState(
     val durationMs: Long = 0L,
     val bufferedPositionMs: Long = 0L,
     val volume: Int = 100,
+    val playbackSpeed: Float = 1.0f,
     val lastAudibleVolume: Int = 100,
     val isMuted: Boolean = false,
     val errorMessage: String? = null,
@@ -475,7 +476,11 @@ class PlaybackSessionManager(
     override fun seekTo(positionMs: Long) = engine.seekTo(positionMs)
     override fun seekForward() = engine.seekForward()
     override fun seekBackward() = engine.seekBackward()
-    override fun setPlaybackSpeed(speed: Float) = engine.setPlaybackSpeed(speed)
+    override fun setPlaybackSpeed(speed: Float) {
+        val bounded = speed.coerceIn(0.25f, 3.0f)
+        engine.setPlaybackSpeed(bounded)
+        _state.update { it.copy(playbackSpeed = bounded) }
+    }
 
     private fun cancelPendingWork() {
         openJob?.cancel()

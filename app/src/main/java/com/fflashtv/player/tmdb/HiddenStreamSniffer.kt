@@ -399,7 +399,7 @@ object HiddenStreamSniffer {
             val report = buildString {
                 append("انتهت المهلة دون التقاط بث صالح.\n")
                 append("• تحميل الصفحة: ${if (pageLoaded.get()) "نعم" else "لا"}\n")
-                append("• عناصر Video: ${videoTagsFound.get()} | أخطاء JS: ${jsErrorCount.get()}\n")
+                append("• عناصر Video: ${videoTagsFound.get()} | مرشحو البث: ${candidateCount.get()} | أخطاء JS: ${jsErrorCount.get()}\n")
                 if (visitedHosts.isNotEmpty()) append("• النطاقات: ${visitedHosts.joinToString(", ")}")
             }
             Result.failure(IllegalStateException(report))

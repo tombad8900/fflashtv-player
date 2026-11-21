@@ -1,8 +1,5 @@
 package com.fflashtv.player.network
 
-import androidx.annotation.OptIn
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.okhttp.OkHttpDataSource
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -15,9 +12,9 @@ import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
 object NetworkDefaults {
-    const val DEFAULT_USER_AGENT = "FFLASHTV/1.0"
-    const val CONNECT_TIMEOUT_SEC = 15L
-    const val READ_TIMEOUT_SEC = 15L
+    const val DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
+    const val CONNECT_TIMEOUT_SEC = 5L
+    const val READ_TIMEOUT_SEC = 12L
 }
 
 class SessionHeaderStore {
@@ -114,30 +111,5 @@ class NetworkClient(
 
     fun clientFor(allowInsecureTls: Boolean): OkHttpClient {
         return if (allowInsecureTls) permissiveClient else baseClient
-    }
-}
-
-@OptIn(UnstableApi::class)
-class StreamDataSourceFactory(
-    private val networkClient: NetworkClient
-) {
-    fun create(
-        userAgent: String,
-        allowInsecureTls: Boolean,
-        strictClient: OkHttpClient? = null
-    ): OkHttpDataSource.Factory {
-        // The strict connection-limit client is created separately from NetworkClient,
-        // so it does not inherit the session header interceptor automatically. Attach the
-        // current session headers here as well; otherwise Referer/Cookie/Authorization are
-        // silently lost whenever strict connection mode is enabled.
-        val client = if (strictClient != null) {
-            strictClient.newBuilder()
-                .addInterceptor(HeaderInterceptor(networkClient.headerStore))
-                .build()
-        } else {
-            networkClient.clientFor(allowInsecureTls)
-        }
-        return OkHttpDataSource.Factory(client)
-            .setUserAgent(userAgent.ifBlank { NetworkDefaults.DEFAULT_USER_AGENT })
     }
 }

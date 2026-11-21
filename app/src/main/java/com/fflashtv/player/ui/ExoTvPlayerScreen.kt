@@ -5,6 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -47,6 +50,8 @@ fun ExoTvPlayerScreen(
             controlsVisible = false
         }
     }
+
+    BackHandler(enabled = !state.isInPip) { onExit() }
 
     val resize = when (state.resizeIndex) {
         1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
@@ -141,10 +146,18 @@ fun ExoTvPlayerScreen(
                 }
 
                 Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (state.previousAvailable) {
+                        IconButton(onClick = { viewModel.sessionManager.playPrevious(); controlsVisible = true }) {
+                            Icon(Icons.Default.SkipPrevious, "العنصر السابق", tint = Color.White)
+                        }
+                    }
+                    IconButton(onClick = { viewModel.openDialog(ActiveDialog.SPEED) }) {
+                        Icon(Icons.Default.Speed, "سرعة التشغيل", tint = Color.White)
+                    }
                     IconButton(onClick = { viewModel.sessionManager.seekBackward() }) {
                         Icon(Icons.Default.Replay10, "رجوع 10 ثوانٍ", tint = Color.White)
                     }
@@ -162,8 +175,14 @@ fun ExoTvPlayerScreen(
                         Icon(if (state.isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
                             "كتم الصوت", tint = Color.White)
                     }
-                    IconButton(onClick = { viewModel.openDialog(ActiveDialog.QUALITY) }) {
+                    IconButton(onClick = { viewModel.openDialog(ActiveDialog.SERVERS) }) {
                         Icon(Icons.Default.Dvr, "السيرفرات والبدائل", tint = Color.White)
+                    }
+                    IconButton(onClick = { viewModel.openDialog(ActiveDialog.QUALITY) }) {
+                        Icon(Icons.Default.HighQuality, "جودة الفيديو", tint = Color.White)
+                    }
+                    IconButton(onClick = { viewModel.openDialog(ActiveDialog.VOLUME) }) {
+                        Icon(Icons.Default.Tune, "مستوى الصوت", tint = Color.White)
                     }
                     IconButton(onClick = { viewModel.openDialog(ActiveDialog.FORMAT) }) {
                         Icon(Icons.Default.HighQuality, "الصيغة", tint = Color.White)
@@ -173,6 +192,11 @@ fun ExoTvPlayerScreen(
                     }
                     IconButton(onClick = { viewModel.sessionManager.cycleAspectRatio() }) {
                         Icon(Icons.Default.AspectRatio, "نمط العرض", tint = Color.White)
+                    }
+                    if (state.nextAvailable) {
+                        IconButton(onClick = { viewModel.sessionManager.playNext(); controlsVisible = true }) {
+                            Icon(Icons.Default.SkipNext, "العنصر التالي", tint = Color.White)
+                        }
                     }
                     IconButton(onClick = onExit) {
                         Icon(Icons.Default.Close, "إغلاق المشغل", tint = Color.White)
@@ -194,6 +218,8 @@ fun ExoTvPlayerScreen(
                 onVolumeChange = { viewModel.sessionManager.setVolume(it) },
                 onToggleMute = { viewModel.sessionManager.toggleMute() },
                 onSelectQuality = { viewModel.sessionManager.selectQuality(it) },
+                onPlaybackSpeedChange = { viewModel.setPlaybackSpeed(it) },
+                onAddSubtitle = { viewModel.addExternalSubtitle(it) },
                 onSelectTrack = { viewModel.selectTrack(it) },
                 onDisableSubtitles = { viewModel.disableSubtitles() },
                 onSwitchFormat = { viewModel.switchFormat(it) },

@@ -166,7 +166,7 @@ fun TmdbLibraryView(
         }
     }
 
-    // Detail + Server Picker + Hidden Sniffer Dialog
+    // Detail + Server Picker + EXO source resolver
     selectedItem?.let { item ->
         AlertDialog(
             onDismissRequest = { if (!isSniffing) selectedItem = null },
@@ -222,7 +222,7 @@ fun TmdbLibraryView(
                                         if (activity == null) return@OutlinedButton
                                         isSniffing = true
                                         sniffStatus = "جاري تشغيل كاشف EXO والتقاط البث من ${srv.name}..."
-                                        // Remove the Compose picker before the sniffer attaches its interactive WebView.
+                                        // Remove the picker before the resolver attaches its hidden 1x1 WebView.
                                         selectedItem = null
                                         scope.launch {
                                             val imdbId = tmdbClient.fetchExternalImdbId(item.id, item.isTv)

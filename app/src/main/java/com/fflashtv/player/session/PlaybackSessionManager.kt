@@ -9,7 +9,7 @@ import com.fflashtv.player.buffer.BufferManager
 import com.fflashtv.player.core.FormatSwitcher
 import com.fflashtv.player.core.LiveStreamManager
 import com.fflashtv.player.core.MediaItemFactory
-import com.fflashtv.player.core.MpvOrMedia3Engine
+import com.fflashtv.player.core.ExoPlayerEngine
 import com.fflashtv.player.core.PlayerController
 import com.fflashtv.player.drm.DrmManager
 import com.fflashtv.player.history.WatchHistoryRepository
@@ -102,7 +102,7 @@ class PlaybackSessionManager(
     private val bufferManager = BufferManager()
     private val drmManager = DrmManager()
     private val mediaItemFactory = MediaItemFactory(drmManager)
-    private val engine = MpvOrMedia3Engine(appContext, dataSourceFactory, bufferManager, drmManager)
+    private val engine = ExoPlayerEngine(appContext, dataSourceFactory, bufferManager, drmManager)
     private val recoveryController = RecoveryController(scope)
     private val liveStreamManager = LiveStreamManager()
     val trackManager = TrackManager()

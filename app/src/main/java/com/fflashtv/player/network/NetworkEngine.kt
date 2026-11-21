@@ -126,7 +126,17 @@ class StreamDataSourceFactory(
         allowInsecureTls: Boolean,
         strictClient: OkHttpClient? = null
     ): OkHttpDataSource.Factory {
-        val client = strictClient ?: networkClient.clientFor(allowInsecureTls)
+        // The strict connection-limit client is created separately from NetworkClient,
+        // so it does not inherit the session header interceptor automatically. Attach the
+        // current session headers here as well; otherwise Referer/Cookie/Authorization are
+        // silently lost whenever strict connection mode is enabled.
+        val client = if (strictClient != null) {
+            strictClient.newBuilder()
+                .addInterceptor(HeaderInterceptor(networkClient.headerStore))
+                .build()
+        } else {
+            networkClient.clientFor(allowInsecureTls)
+        }
         return OkHttpDataSource.Factory(client)
             .setUserAgent(userAgent.ifBlank { NetworkDefaults.DEFAULT_USER_AGENT })
     }

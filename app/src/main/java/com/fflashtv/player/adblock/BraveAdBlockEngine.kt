@@ -107,7 +107,7 @@ object BraveAdBlockEngine {
                 result
             } catch (error: Throwable) {
                 lastError = error.message ?: error.javaClass.simpleName
-                "تعذر تحديث القوائم: \${lastError}"
+                "تعذر تحديث القوائم: ${lastError}"
             }
             onResult(message)
         }
@@ -122,7 +122,7 @@ object BraveAdBlockEngine {
                 "تم تطبيق القوائم المحددة"
             } catch (error: Throwable) {
                 lastError = error.message ?: error.javaClass.simpleName
-                "تعذر تطبيق القوائم: \${lastError}"
+                "تعذر تطبيق القوائم: ${lastError}"
             }
             onResult(message)
         }

@@ -36,6 +36,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.resume
 import com.fflashtv.player.adblock.BraveAdBlockEngine
 
@@ -177,6 +178,9 @@ object HiddenStreamSniffer {
         val lastCandidateAt = AtomicLong(0L)
         val userRequestedPlay = AtomicBoolean(false)
         val playRequestedAt = AtomicLong(0L)
+        // WebView callbacks such as shouldInterceptRequest run on background threads.
+        // Keep the top-level page URL in a thread-safe snapshot updated on the UI thread.
+        val currentPageUrl = AtomicReference(embedUrl)
 
         val result = withTimeoutOrNull(timeoutMs) {
             suspendCancellableCoroutine<SniffedStream?> { cont ->
@@ -344,8 +348,14 @@ object HiddenStreamSniffer {
                             return false
                         }
 
+                        override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                            super.onPageStarted(view, url, favicon)
+                            if (!url.isNullOrBlank()) currentPageUrl.set(url)
+                        }
+
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
+                            if (!url.isNullOrBlank()) currentPageUrl.set(url)
                             pageLoaded.set(true)
                         }
 
@@ -358,7 +368,7 @@ object HiddenStreamSniffer {
                             val protectedPlaybackRequest = isProtectedPlaybackRequest(reqUrl, accept) ||
                                 (!requestHost.isNullOrBlank() && protectedMediaHosts.contains(requestHost))
                             if (!protectedPlaybackRequest) {
-                                val pageUrl = view?.url ?: embedUrl
+                                val pageUrl = currentPageUrl.get().ifBlank { embedUrl }
                                 val blockedByBrave = runCatching {
                                     BraveAdBlockEngine.shouldBlock(
                                         reqUrl,

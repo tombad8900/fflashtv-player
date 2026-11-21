@@ -13,7 +13,6 @@
 
 ## Existing architecture
 - `tmdb/ExoWebViewResolver.kt`: EXO TV-derived hidden WebView resolver, event bridge, player-page hops, stream/subtitle discovery, cookie/header export, and bounded cleanup.
-- `tmdb/HiddenStreamSniffer.kt`: legacy visible WebView resolver retained in source for reference only; TMDB playback must not call it.
 - `tmdb/TmdbLibraryView.kt`: builds the existing source embed URL, calls ExoWebViewResolver, and offers the three player presentations.
 - `ui/PlayerLaunchBridge.kt`: normalizes ChannelItem playlists into PlaybackInput and dispatches to Media3, libmpv, or EXO-style player Activity.
 - `ui/ExoTvPlayerActivity.kt` and `ui/ExoTvPlayerScreen.kt`: EXO-style Media3 player presentation.
@@ -22,7 +21,7 @@
 - `mpv/` and `ui/Player*`: libmpv and standard Media3 playback paths.
 
 ## EXO TV source resolver port
-- The current source-capture implementation is a Kotlin adaptation of EXO TV's `z4/e0`, `z4/b0`, `z4/d0`, `z4/c0`, and `z4/g0` flow. Do not continue extending the old HiddenStreamSniffer path.
+- The old visible WebView sniffer has been removed. The only TMDB source-capture implementation is the Kotlin adaptation of EXO TV's `z4/e0`, `z4/b0`, `z4/d0`, `z4/c0`, and `z4/g0` flow.
 - The source page is hosted in an attached 1x1 WebView. The document viewport is spoofed to 1280x720 and document visibility is kept visible, matching the EXO approach.
 - Use the EXO desktop Chrome User-Agent, JavaScript, DOM storage, file access, mixed content, first-party cookies, and third-party cookies.
 - The JS chain polls every 250ms; it detects the player's own source from video/source elements and Performance Resource Timing, watches fetch/XHR responses and dynamically assigned media URLs, and extracts stream URLs from response text.

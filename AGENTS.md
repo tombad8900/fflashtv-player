@@ -83,3 +83,12 @@
 - Device validation is still required. Verify Back and the close control return to the movie/server picker, that no activity is finished, that capture still detects a user-started stream, and that success handoff removes the WebView cleanly.
 
 - Follow-up hardening: the back-cancellation flag is scoped to the full suspend operation; callback registration is performed only when the host Activity is a ComponentActivity. The obsolete JavaScript play-selector/tapPlayer bridge was removed with the overlay, so no synthetic tap path remains.
+
+
+## EXO resolver techniques selectively ported (2026-11-21)
+- Keep FFlashTV's existing visible, user-interactive source WebView and its explicit player-region touch requirement. Do not replace it with EXO's hidden 1x1 WebView, desktop spoofing, automatic player clicks, or a new resolver pipeline.
+- The current capture path now supplements its existing fetch/XHR/video/request-interception hooks with Performance Resource Timing inspection, dynamic HTMLMediaElement.src and relevant setAttribute observation, and inspection of iframe source URLs. Iframe inspection is observational only; it must not navigate to arbitrary frames or click them.
+- Resource classification now accepts direct .m4v, .mov, .flv, and .avi candidates in addition to existing HLS, DASH, MP4, MKV, and WebM handling. .ts and .m4s remain segments, not root playback candidates.
+- Candidate de-duplication must merge later network-request headers into an earlier JavaScript-discovered URL. The actual shouldInterceptRequest headers take precedence over JS/CookieManager fallback values; this preserves per-request Cookie, Authorization, Referer, Origin, and User-Agent when available.
+- Keep the 8-second quiet period after user playback intent, HLS/DASH ranking, subtitle collection, ad/media protection, cancellation, and existing engine chooser unchanged.
+- This is a selective source-capture port only. EXO's two-stage TMDB metadata resolver and PlayerActivity handoff are not copied: FFlashTV already builds its source URL and launches its existing Media3/libmpv engines. Backup stream candidates, per-subtitle headers, provider-aware hop state, DRM/MSE extraction, and runtime device behavior remain unverified/not implemented.

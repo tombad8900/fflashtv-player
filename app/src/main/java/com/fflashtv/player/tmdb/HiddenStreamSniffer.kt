@@ -29,6 +29,7 @@ import java.net.URLDecoder
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.resume
 
 object HiddenStreamSniffer {
@@ -48,8 +49,24 @@ object HiddenStreamSniffer {
     )
 
     private fun isAdUrl(url: String): Boolean {
-        val lower = url.lowercase()
-        return adKeywords.any { lower.contains(it) }
+        val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return false
+        val host = uri.host?.lowercase().orEmpty()
+        val path = uri.encodedPath?.lowercase().orEmpty()
+        val query = uri.encodedQuery?.lowercase().orEmpty()
+        val adHosts = listOf(
+            "doubleclick.net", "googlesyndication.com", "googleadservices.com",
+            "adsterra.com", "popads.net", "propellerads.com", "exoclick.com",
+            "juicyads.com", "taboola.com", "outbrain.com", "mgid.com",
+            "clickadu.com", "hilltopads.net", "adcash.com", "popcash.net",
+            "trafficjunky.net", "histats.com", "google-analytics.com",
+            "googletagmanager.com", "cloudflareinsights.com", "whos.amung.us"
+        )
+        if (adHosts.any { host == it || host.endsWith(".$it") }) return true
+        if (host.startsWith("ads.") || host.startsWith("adserver.") ||
+            host.contains("popunder") || host.contains("onclickads")) return true
+        val pathTokens = listOf("/ads/", "/adserver/", "/popunder", "/pop-up", "/popup/",
+            "clickadu", "trafficjunky", "googletagmanager", "google-analytics")
+        return pathTokens.any { it in path || it in query }
     }
 
     private fun unwrapWrappedUrl(raw: String): String? {
@@ -80,6 +97,14 @@ object HiddenStreamSniffer {
         val url: String,
         val kind: String,
         val playable: Boolean
+    )
+
+    private data class CapturedCandidate(
+        val url: String,
+        val kind: String,
+        val headers: Map<String, String>,
+        val score: Int,
+        val capturedAt: Long
     )
 
     private fun classifyResource(url: String): ClassifiedResource? {
@@ -132,6 +157,8 @@ object HiddenStreamSniffer {
         val pageLoaded = AtomicBoolean(false)
         val videoTagsFound = AtomicInteger(0)
         val jsErrorCount = AtomicInteger(0)
+        val candidateCount = AtomicInteger(0)
+        val firstCandidateAt = AtomicLong(0L)
 
         val result = withTimeoutOrNull(timeoutMs) {
             suspendCancellableCoroutine<SniffedStream?> { cont ->
@@ -151,23 +178,56 @@ object HiddenStreamSniffer {
                     }
                 }
 
-                fun completeWith(url: String, kind: String, hdrs: Map<String, String>) {
-                    if (done.compareAndSet(false, true)) {
-                        val ref = hdrs.entries.firstOrNull { it.key.equals("Referer", true) }?.value ?: embedUrl
-                        val ua = hdrs.entries.firstOrNull { it.key.equals("User-Agent", true) }?.value ?: BROWSER_UA
-                        val ck = hdrs.entries.firstOrNull { it.key.equals("Cookie", true) }?.value ?: ""
-                        val found = SniffedStream(
-                            streamUrl = url,
-                            streamType = kind,
-                            referer = ref,
-                            userAgent = ua,
-                            cookies = ck,
-                            subtitles = subs.toList()
-                        )
-                        activity.runOnUiThread {
-                            cleanup()
-                            if (cont.isActive) cont.resume(found)
-                        }
+                val candidates = CopyOnWriteArrayList<CapturedCandidate>()
+
+                fun scoreCandidate(item: ClassifiedResource): Int {
+                    val value = item.url.lowercase()
+                    return when {
+                        value.contains(".m3u8") -> 100
+                        value.contains(".mpd") -> 95
+                        value.contains(".mp4") -> 80
+                        value.contains(".webm") -> 70
+                        else -> 50
+                    } + if (value.contains("master")) 8 else 0
+                }
+
+                fun offerCandidate(url: String, kind: String, hdrs: Map<String, String>) {
+                    if (done.get() || isAdUrl(url)) return
+                    val item = classifyResource(url)?.takeIf { it.playable } ?: return
+                    if (candidates.any { it.url == item.url }) return
+                    val allowed = setOf("user-agent", "referer", "origin", "cookie", "authorization", "accept")
+                    val clean = hdrs.filterKeys { it.lowercase() in allowed }.toMutableMap()
+                    if (clean.keys.none { it.equals("User-Agent", true) }) clean["User-Agent"] = BROWSER_UA
+                    if (clean.keys.none { it.equals("Referer", true) }) clean["Referer"] = embedUrl
+                    if (clean.keys.none { it.equals("Cookie", true) }) {
+                        val cookie = runCatching { CookieManager.getInstance().getCookie(item.url) }.getOrNull()
+                        if (!cookie.isNullOrBlank()) clean["Cookie"] = cookie
+                    }
+                    candidates.add(CapturedCandidate(item.url, item.kind.ifBlank { kind }, clean, scoreCandidate(item), android.os.SystemClock.elapsedRealtime()))
+                    candidateCount.set(candidates.size)
+                    firstCandidateAt.compareAndSet(0L, android.os.SystemClock.elapsedRealtime())
+                }
+
+                fun finishBest() {
+                    if (done.get() || candidates.isEmpty()) return
+                    val best = candidates.maxWithOrNull(compareBy<CapturedCandidate> { it.score }.thenBy { it.capturedAt }) ?: return
+                    if (!done.compareAndSet(false, true)) return
+                    val referer = best.headers.entries.firstOrNull { it.key.equals("Referer", true) }?.value ?: embedUrl
+                    val userAgent = best.headers.entries.firstOrNull { it.key.equals("User-Agent", true) }?.value ?: BROWSER_UA
+                    val cookies = best.headers.entries.firstOrNull { it.key.equals("Cookie", true) }?.value.orEmpty()
+                    val found = SniffedStream(
+                        streamUrl = best.url,
+                        streamType = best.kind,
+                        referer = referer,
+                        userAgent = userAgent,
+                        cookies = cookies,
+                        subtitles = subs.toList(),
+                        diagnostics = "captured=${candidates.size}; selectedScore=${best.score}",
+                        requestHeaders = best.headers
+                    )
+                    activity.runOnUiThread {
+                        cleanup()
+                        if (cont.isActive) cont.resume(found)
                     }
                 }
 
@@ -200,7 +260,7 @@ object HiddenStreamSniffer {
                         fun onVideoFound(url: String) {
                             if (url.startsWith("http") && !isAdUrl(url)) {
                                 classifyResource(url)?.takeIf { it.playable }?.let {
-                                    completeWith(it.url, it.kind, mapOf("Referer" to embedUrl, "User-Agent" to ua))
+                                    offerCandidate(it.url, it.kind, mapOf("Referer" to embedUrl, "User-Agent" to ua))
                                 }
                             }
                         }
@@ -212,6 +272,8 @@ object HiddenStreamSniffer {
                     }, "CinemaCapture")
 
                     wv.webChromeClient = object : WebChromeClient() {
+                        override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean = false
+
                         override fun onConsoleMessage(cm: ConsoleMessage?): Boolean {
                             if (cm?.messageLevel() == ConsoleMessage.MessageLevel.ERROR) jsErrorCount.incrementAndGet()
                             return true
@@ -252,7 +314,7 @@ object HiddenStreamSniffer {
                                     }
                                     if (hdrs.keys.none { it.equals("User-Agent", true) }) hdrs["User-Agent"] = ua
                                     if (hdrs.keys.none { it.equals("Referer", true) }) hdrs["Referer"] = embedUrl
-                                    completeWith(item.url, item.kind, hdrs)
+                                    offerCandidate(item.url, item.kind, hdrs)
                                 }
                             }
                             return null
@@ -260,16 +322,38 @@ object HiddenStreamSniffer {
                     }
 
                     webView = wv
+                    wv.isClickable = false
+                    wv.isFocusable = false
+                    wv.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+                    wv.setOnTouchListener { _, _ -> true }
                     root?.addView(wv, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
                     if (headers.isNotEmpty()) wv.loadUrl(embedUrl, headers) else wv.loadUrl(embedUrl)
 
                     pulseJob = CoroutineScope(Dispatchers.Main).launch {
                         while (isActive && !done.get()) {
-                            delay(1_400L)
+                            delay(1_000L)
+                            if (candidates.isNotEmpty() && android.os.SystemClock.elapsedRealtime() - firstCandidateAt.get() >= 2_600L) {
+                                finishBest()
+                                break
+                            }
                             wv.evaluateJavascript(
                                 """
                                 (function(){
                                   try {
+                                    if (!window.__fftvCaptureHooks) {
+                                      window.__fftvCaptureHooks = true;
+                                      var oldFetch = window.fetch;
+                                      if (oldFetch) window.fetch = function(){
+                                        var u = arguments[0] && (arguments[0].url || arguments[0]);
+                                        if (u) try { CinemaCapture.onVideoFound(String(u)); } catch(e) {}
+                                        return oldFetch.apply(this, arguments);
+                                      };
+                                      var oldOpen = XMLHttpRequest.prototype.open;
+                                      XMLHttpRequest.prototype.open = function(m,u){
+                                        if (u) try { CinemaCapture.onVideoFound(String(u)); } catch(e) {}
+                                        return oldOpen.apply(this, arguments);
+                                      };
+                                    }
                                     window.open = function(){ return null; };
                                     var vids = document.querySelectorAll('video');
                                     CinemaCapture.onVideoTagCount(vids.length);
@@ -283,8 +367,25 @@ object HiddenStreamSniffer {
                                     document.querySelectorAll('video track, track').forEach(function(t){
                                       if (t.src) CinemaCapture.subtitle(t.src);
                                     });
-                                    var btn = document.querySelector('video, .play-btn, .jw-icon-display, .vjs-big-play-button, #play, [aria-label*="Play"], button');
-                                    if (btn) btn.click();
+                                    if (!window.__fftvPlayAttempted) {
+                                      var selectors = [
+                                        '.jw-icon-display', '.jw-display-icon-container',
+                                        '.vjs-big-play-button', '.plyr__control--overlaid',
+                                        '[data-plyr="play"]', '.play-btn',
+                                        '[aria-label="Play"]', '[title="Play"]',
+                                        'button[aria-label*="Play"]'
+                                      ];
+                                      var btn = null;
+                                      for (var i=0; i<selectors.length; i++) {
+                                        try { btn = document.querySelector(selectors[i]); } catch(e) {}
+                                        if (btn && btn.getClientRects().length) break;
+                                        btn = null;
+                                      }
+                                      if (btn) {
+                                        window.__fftvPlayAttempted = true;
+                                        btn.click();
+                                      }
+                                    }
                                   } catch(e) {}
                                 })();
                                 """.trimIndent(),

@@ -6,10 +6,8 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.View
 import android.view.ViewGroup
 import android.webkit.*
-import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import com.fflashtv.player.adblock.BraveAdBlockEngine

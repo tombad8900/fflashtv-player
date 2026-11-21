@@ -53,7 +53,7 @@ class ExoTvStreamResolver(
         require(config.ytApi.isNotBlank()) { "EXO ytapi is missing from appConfig" }
         val response = getText(config.ytApi + id + "?_=" + System.currentTimeMillis(), config.ytApiHeaders)
         val json = decodeTokenPayload(response.body, response.token)
-        return parseResolvedStreams(json)
+        return parseResolvedStreams(JSONObject(json))
     }
 
     private fun resolveYtv(channel: ExoTvChannel, config: ExoTvAppConfig): List<ExoTvResolvedStream> {

@@ -46,7 +46,7 @@ fun PlayerDialogs(
     onToggleMute: () -> Unit,
     onSelectQuality: (QualityOption) -> Unit,
     onPlaybackSpeedChange: (Float) -> Unit,
-    onAddSubtitle: (String) -> Unit,
+    onAddSubtitle: (String) -> Result<Unit>,
     onSelectTrack: (TrackInfo) -> Unit,
     onDisableSubtitles: () -> Unit,
     onSwitchFormat: (String) -> Unit,
@@ -154,7 +154,7 @@ fun PlayerDialogs(
                         listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f).chunked(3).forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 row.forEach { rate ->
-                                    FilterChip(selected = false, onClick = { onPlaybackSpeedChange(rate); onDismiss() }, label = { Text("${rate}x") })
+                                    FilterChip(selected = state.playbackSpeed == rate, onClick = { onPlaybackSpeedChange(rate); onDismiss() }, label = { Text("${rate}x") })
                                 }
                             }
                         }
@@ -166,6 +166,7 @@ fun PlayerDialogs(
 
         ActiveDialog.TRACKS -> {
             var subtitleUrl by remember(activeDialog) { mutableStateOf("") }
+            var subtitleMessage by remember(activeDialog) { mutableStateOf<String?>(null) }
             AlertDialog(
                 onDismissRequest = onDismiss,
                 title = { Text("المسارات والترجمة") },
@@ -210,7 +211,6 @@ fun PlayerDialogs(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { onSelectTrack(t) }
-                                    .padding(vertical = 4.dp)
                                     .padding(vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -228,8 +228,12 @@ fun PlayerDialogs(
                         )
                         Button(
                             enabled = subtitleUrl.startsWith("http://", true) || subtitleUrl.startsWith("https://", true),
-                            onClick = { onAddSubtitle(subtitleUrl.trim()); onDismiss() }
+                            onClick = {
+                                val result = onAddSubtitle(subtitleUrl.trim())
+                                subtitleMessage = result.exceptionOrNull()?.message ?: "تمت إضافة الترجمة؛ قد يستغرق ظهورها لحظات."
+                            }
                         ) { Text("إضافة الترجمة") }
+                        subtitleMessage?.let { Text(it, color = if (it.startsWith("تمت")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error) }
 
                         if (videoTracks.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))

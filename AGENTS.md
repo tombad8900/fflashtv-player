@@ -83,6 +83,7 @@
 - Android TV/remote input is handled through D-pad, center/enter, media play/pause/next/previous, and volume keys; touch double-tap seeking remains available.
 - External subtitle URLs are added to the active media item after HTTP/HTTPS validation; Media3 handles supported SRT/VTT/ASS subtitle tracks.
 - Server switching preserves VOD position and uses the selected candidate's own headers; it must not advance playlist navigation.
+- On retryable network/parsing failures, try each untried backup candidate sequentially with that candidate's headers/DRM before MIME fallback; never launch concurrent retries for one session. Reset the attempted-server set after the first frame of a stable candidate.
 - Match reference behavior from the inspected layout: distinct server, quality, subtitle, error, seek, and bottom-control panels. Do not claim full parity until each behavior is verified.
 
 ## Private EXO reference APK decompilation

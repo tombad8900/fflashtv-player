@@ -201,10 +201,10 @@ object HiddenStreamSniffer {
                         backCallback?.remove()
                         backCallback = null
                         webView?.stopLoading()
-                        webView?.destroy()
-                        webView = null
                         captureContainer?.let { root?.removeView(it) }
                         captureContainer = null
+                        webView?.destroy()
+                        webView = null
                     }
                 }
 

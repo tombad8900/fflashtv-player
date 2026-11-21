@@ -23,6 +23,8 @@ import com.fflashtv.player.netlimit.ConnectionLimitManager
 import com.fflashtv.player.network.NetworkClient
 import com.fflashtv.player.network.StreamDataSourceFactory
 import com.fflashtv.player.recovery.RecoveryController
+import com.fflashtv.player.recovery.ErrorClassifier
+import com.fflashtv.player.recovery.ErrorCategory
 import com.fflashtv.player.resolver.MimeResolver
 import com.fflashtv.player.resolver.PlaybackInputParser
 import com.fflashtv.player.resolver.StreamProbe
@@ -135,6 +137,7 @@ class PlaybackSessionManager(
     private var playlist: List<PlaybackInput> = emptyList()
     private var resumeOnReturn: Boolean = false
     private var currentIndex: Int = -1
+    private val triedFallbackUrls = linkedSetOf<String>()
 
     fun setPlaylist(items: List<PlaybackInput>, startIndex: Int = 0) {
         playlist = items
@@ -149,7 +152,9 @@ class PlaybackSessionManager(
         openSource(input, preservePosition = !_state.value.isLive)
     }
 
-    fun openSource(input: PlaybackInput, preservePosition: Boolean = false) {
+    fun openSource(input: PlaybackInput, preservePosition: Boolean = false, preserveFallbackState: Boolean = false) {
+        if (!preserveFallbackState) triedFallbackUrls.clear()
+        if (input.url.isNotBlank()) triedFallbackUrls.add(input.url)
         val savedPos = if (preservePosition) _state.value.positionMs else {
             if (input.resumePositionMs > 0L) input.resumePositionMs
             else progressStore.getPositionFor(input.id.ifBlank { input.url.hashCode().toString() })
@@ -283,6 +288,8 @@ class PlaybackSessionManager(
             override fun onRenderedFirstFrame() {
                 if (activeSession?.id != sessionId) return
                 recoveryController.onFirstFrameRendered(sessionId)
+                triedFallbackUrls.clear()
+                triedFallbackUrls.add(parsed.url)
                 _state.update {
                     it.copy(showPoster = false, errorMessage = null, retryAttempt = 0)
                 }
@@ -312,8 +319,47 @@ class PlaybackSessionManager(
                         if (activeSession?.id != sessionId) return@scheduleRecovery
                         _state.update { it.copy(retryAttempt = attempt, mimeType = nextMime) }
                         val resumePos = if (parsed.isLive) 0L else player.currentPosition.coerceAtLeast(0L)
-                        if (limitActive) limitManager.terminateActiveConnections("Media3 retry")
-                        startPlayerForSession(sessionId, parsed.copy(resumePositionMs = resumePos), nextMime, limitActive)
+
+                        val canFailOver = ErrorClassifier.classify(error) in setOf(
+                            ErrorCategory.IO_ERROR,
+                            ErrorCategory.PARSING_ERROR
+                        )
+                        val backup = if (canFailOver) {
+                            parsed.originalInput.qualities.firstOrNull { option ->
+                                option.url.isNotBlank() && option.url !in triedFallbackUrls
+                            }
+                        } else null
+
+                        if (backup != null) {
+                            triedFallbackUrls.add(backup.url)
+                            val selectedOptions = parsed.originalInput.qualities.map { option ->
+                                option.copy(isSelected = option.url == backup.url && option.label == backup.label)
+                            }
+                            val fallbackInput = parsed.originalInput.copy(
+                                url = backup.url,
+                                headers = backup.headers.ifEmpty { parsed.headers },
+                                drmConfig = if (backup.drmConfig.type != com.fflashtv.player.model.DrmType.NONE) {
+                                    backup.drmConfig
+                                } else parsed.drmConfig,
+                                qualities = selectedOptions,
+                                resumePositionMs = resumePos
+                            )
+                            _state.update {
+                                it.copy(
+                                    lifecycle = SessionLifecycleState.RECOVERING,
+                                    isBuffering = true,
+                                    errorMessage = "تعذر تشغيل المصدر الحالي؛ جاري تجربة ${backup.label}"
+                                )
+                            }
+                            openSource(
+                                fallbackInput,
+                                preservePosition = !parsed.isLive,
+                                preserveFallbackState = true
+                            )
+                        } else {
+                            if (limitActive) limitManager.terminateActiveConnections("Media3 retry")
+                            startPlayerForSession(sessionId, parsed.copy(resumePositionMs = resumePos), nextMime, limitActive)
+                        }
                     },
                     onFatalError = { msg ->
                         if (activeSession?.id != sessionId) return@scheduleRecovery

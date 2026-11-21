@@ -68,6 +68,7 @@
 - The shared player bridge has a single launch API and no engine-selection enum or parameter.
 - Hidden WebView resolver code using visibility/layer constants must import `android.view.View`.
 - Always run `:app:assembleDebug` after Kotlin integration changes; Termux builds may emit non-fatal NDK `llvm-strip` host-binary warnings while packaging unstripped native libraries.
+- The Android Actions workflow must upload `app/build/outputs/apk/debug/*.apk` as the `FFlashTV-debug-apk` artifact after a successful build so the user can install the exact tested commit.
 
 
 ## Official EXO TV-only launch migration

@@ -2,7 +2,8 @@ package com.fflashtv.player.ui
 
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -55,8 +56,18 @@ fun ExoTvPlayerScreen(
     }
 
     Box(
-        Modifier.fillMaxSize().background(Color.Black)
-            .clickable(enabled = !state.isInPip) { controlsVisible = !controlsVisible }
+        Modifier.fillMaxSize().background(Color.Black).pointerInput(state.isInPip) {
+            detectTapGestures(
+                onTap = { if (!state.isInPip) controlsVisible = !controlsVisible },
+                onDoubleTap = { point ->
+                    if (!state.isInPip) {
+                        if (point.x < size.width / 2f) viewModel.sessionManager.seekBackward()
+                        else viewModel.sessionManager.seekForward()
+                        controlsVisible = true
+                    }
+                }
+            )
+        }
     ) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),

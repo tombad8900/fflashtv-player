@@ -143,6 +143,11 @@ class PlaybackSessionManager(
         }
     }
 
+    fun retryCurrent() {
+        val input = activeSession?.parsed?.originalInput ?: return
+        openSource(input, preservePosition = !_state.value.isLive)
+    }
+
     fun openSource(input: PlaybackInput, preservePosition: Boolean = false) {
         val savedPos = if (preservePosition) _state.value.positionMs else {
             if (input.resumePositionMs > 0L) input.resumePositionMs

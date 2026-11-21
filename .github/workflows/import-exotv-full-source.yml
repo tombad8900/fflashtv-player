@@ -1,0 +1,78 @@
+name: Import complete EXO TV reference snapshot
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/exotv-resolver-and-player
+    paths:
+      - .github/workflows/import-exotv-full-source.yml
+
+permissions:
+  contents: write
+
+jobs:
+  import-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout FFlashTV target branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/exotv-resolver-and-player
+          path: target
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout private EXO reference repository
+        uses: actions/checkout@v4
+        with:
+          repository: tombad8900/exotv-analysis-reference
+          ref: main
+          path: reference
+          fetch-depth: 1
+          token: ${{ secrets.REFERENCE_REPO_TOKEN }}
+
+      - name: Validate the complete decoded source snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s reference/analysis-output/exotv/AndroidManifest.xml
+          test -s reference/analysis-output/exotv/smali/com/exotv/net/PlayerActivity.smali
+          test -s reference/analysis-output/exotv/res/layout/activity_player.xml
+          test -s reference/analysis-output/jadx/sources/com/exotv/net/PlayerActivity.java
+          APKTOOL_COUNT="$(find reference/analysis-output/exotv -type f | wc -l)"
+          SMALI_COUNT="$(find reference/analysis-output/exotv -type f -name '*.smali' | wc -l)"
+          JADX_COUNT="$(find reference/analysis-output/jadx -type f | wc -l)"
+          JAVA_COUNT="$(find reference/analysis-output/jadx -type f -name '*.java' | wc -l)"
+          echo "APKTOOL_FILES=$APKTOOL_COUNT" >> "$GITHUB_ENV"
+          echo "SMALI_FILES=$SMALI_COUNT" >> "$GITHUB_ENV"
+          echo "JADX_FILES=$JADX_COUNT" >> "$GITHUB_ENV"
+          echo "JAVA_FILES=$JAVA_COUNT" >> "$GITHUB_ENV"
+          printf 'Validated apktool=%s smali=%s jadx=%s java=%s\n' "$APKTOOL_COUNT" "$SMALI_COUNT" "$JADX_COUNT" "$JAVA_COUNT"
+
+      - name: Replace the stale partial reference snapshot with the full current decode
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf target/app/src/main/exotv-original/exotv target/app/src/main/exotv-original/jadx
+          mkdir -p target/app/src/main/exotv-original
+          cp -a reference/analysis-output/exotv target/app/src/main/exotv-original/exotv
+          cp -a reference/analysis-output/jadx target/app/src/main/exotv-original/jadx
+          test -s target/app/src/main/exotv-original/exotv/smali/com/exotv/net/PlayerActivity.smali
+          test -s target/app/src/main/exotv-original/jadx/sources/com/exotv/net/PlayerActivity.java
+          test "$(find target/app/src/main/exotv-original/exotv -type f | wc -l)" = "$APKTOOL_COUNT"
+          test "$(find target/app/src/main/exotv-original/jadx -type f | wc -l)" = "$JADX_COUNT"
+
+      - name: Commit the complete reference snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd target
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A app/src/main/exotv-original
+          if git diff --cached --quiet; then
+            echo "Reference snapshot already matches the current APK decode."
+            exit 0
+          fi
+          git commit -m "Import complete EXO TV APK source snapshot"
+          git push origin HEAD:feature/exotv-resolver-and-player

@@ -28,9 +28,13 @@
 - Known ad hosts/paths must be filtered without blocking stream manifests, segments, or subtitles.
 
 ## Brave ad-block integration
-- STAR previously used eight filter lists and the `org.mlm.adblock.AdblockEngine` / `libadblock_ffi.so` engine.
+- The user's existing STAR project is at `~/STAR`; its browser integration is `app/src/main/java/com/lagradost/cloudstream3/features/browser/BrowserScreen.kt`.
+- STAR uses the native `org.mlm.adblock.AdblockEngine` wrapper with `libadblock_ffi.so`; this is bundled from the APK/source, not fetched as a Maven dependency.
+- STAR assets include `app/src/main/assets/adblock/initial_filters.txt`, `resources.json`, and eight lists under `assets/adblock/lists/`:
+  `brave-android-specific.txt`, `brave-specific.txt`, `brave-unbreak.txt`, `easylist.txt`, `easyprivacy.txt`, `liste-ar.txt`, `peter-lowe.txt`, `ublock-filters.txt`.
+- Native library ABI folders in STAR: `app/src/main/jniLibs/{arm64-v8a,armeabi-v7a,x86,x86_64}/libadblock_ffi.so`.
 - Do not replace that engine with a domain-only parser or claim full ABP compatibility from a host list.
-- Before porting the native engine, confirm the exact STAR source/binaries, license, ABI coverage, list URLs, and resource files. The STAR project source is not currently present in this repository.
+- The STAR working tree is on the user's Termux device and is not directly readable through this repository connection. Obtain the exact files/binaries before porting; do not substitute unrelated implementations.
 - Filter updates should be versioned, cached locally, and applied atomically; retain the last known-good lists when an update fails.
 - Never block media or subtitle requests solely because they are cross-origin.
 

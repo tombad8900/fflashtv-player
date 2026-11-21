@@ -1,12 +1,8 @@
 package com.fflashtv.player.ui
 
 import android.app.Application
-import android.content.Context
-import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.fflashtv.player.model.PlaybackInput
-import com.fflashtv.player.mpv.MpvPlayerActivity
 import com.fflashtv.player.sources.ChannelItem
 import com.fflashtv.player.sources.GroupItem
 import com.fflashtv.player.sources.SourceConfig
@@ -20,25 +16,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-object PlayerLaunchBridge {
-    @Volatile
-    var pendingPlaylist: List<PlaybackInput> = emptyList()
-
-    @Volatile
-    var pendingStartIndex: Int = 0
-
-    enum class EngineType { MEDIA3, LIBMPV }
-
-    fun launch(context: Context, channels: List<ChannelItem>, startIndex: Int, engine: EngineType = EngineType.MEDIA3) {
-        pendingPlaylist = channels.map { it.toPlaybackInput() }
-        pendingStartIndex = startIndex.coerceIn(0, (channels.size - 1).coerceAtLeast(0))
-        val target = if (engine == EngineType.LIBMPV) MpvPlayerActivity::class.java else PlayerActivity::class.java
-        val intent = Intent(context, target).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
-    }
-}
 
 enum class LibraryFilterMode {
     GROUPS, FAVORITES

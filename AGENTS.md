@@ -81,3 +81,5 @@
 - Register an Activity OnBackPressedCallback while capture is active. Back/close removes the WebView container, stops and destroys the WebView, cancels the capture polling job, and resumes the suspended capture with a cancellation result instead of allowing the MainActivity to finish.
 - TmdbLibraryView restores the selected movie/server picker after capture cancellation and does not show a failure banner for an intentional exit.
 - Device validation is still required. Verify Back and the close control return to the movie/server picker, that no activity is finished, that capture still detects a user-started stream, and that success handoff removes the WebView cleanly.
+
+- Follow-up hardening: the back-cancellation flag is scoped to the full suspend operation; callback registration is performed only when the host Activity is a ComponentActivity. The obsolete JavaScript play-selector/tapPlayer bridge was removed with the overlay, so no synthetic tap path remains.

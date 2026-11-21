@@ -58,7 +58,6 @@ fun TmdbLibraryView(
 
     var isSniffing by remember { mutableStateOf(false) }
     var sniffStatus by remember { mutableStateOf<String?>(null) }
-    var readyStream by remember { mutableStateOf<Pair<String, SniffedStream>?>(null) }
 
     val servers by serversStore.servers.collectAsState()
     val visibleServers = remember(servers) { serversStore.visibleEnabledServers() }
@@ -166,7 +165,7 @@ fun TmdbLibraryView(
         }
     }
 
-    // Detail + Server Picker + EXO source resolver
+    // EXO TV automatic source resolution: try enabled servers by configured priority.
     selectedItem?.let { item ->
         AlertDialog(
             onDismissRequest = { if (!isSniffing) selectedItem = null },
@@ -202,121 +201,92 @@ fun TmdbLibraryView(
                             }
                         }
                     }
-
-                    if (isSniffing) {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    }
-                    sniffStatus?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                    }
-
-                    Text("اختر خادم التشغيل:", style = MaterialTheme.typography.labelLarge)
-                    if (visibleServers.isEmpty()) {
-                        Text("لا توجد مصادر JSON مفعّلة. استورد ملف المصادر من قسم المصادر والإعدادات.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                    } else {
-                        LazyColumn(modifier = Modifier.heightIn(max = 200.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            items(visibleServers, key = { it.id }) { srv ->
-                                OutlinedButton(
-                                    enabled = !isSniffing,
-                                    onClick = {
-                                        if (activity == null) return@OutlinedButton
-                                        isSniffing = true
-                                        sniffStatus = "جاري تشغيل كاشف EXO والتقاط البث من ${srv.name}..."
-                                        // Remove the picker before the resolver attaches its hidden 1x1 WebView.
-                                        selectedItem = null
-                                        scope.launch {
-                                            val imdbId = tmdbClient.fetchExternalImdbId(item.id, item.isTv)
-                                            val embedUrl = serversStore.buildEmbedUrl(srv, item.id, imdbId, item.isTv, selectedSeason, selectedEpisode)
-                                            val res = ExoWebViewResolver.capture(activity, embedUrl, srv.headers)
-                                            isSniffing = false
-                                            res.onSuccess { sniffed ->
-                                                val displayTitle = if (item.isTv) "${item.title} - S${selectedSeason}E${selectedEpisode}" else item.title
-                                                selectedItem = null
-                                                readyStream = displayTitle to sniffed
-                                            }.onFailure { err ->
-                                                sniffStatus = if (err.message == "CAPTURE_CANCELLED") {
-                                                    null
-                                                } else {
-                                                    err.message ?: "فشل الاقتناص"
-                                                }
-                                                selectedItem = item
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text("${srv.name} (أولوية ${srv.priority})", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        if (visibleServers.isEmpty()) "لا توجد خوادم مفعّلة. أضف مصادر JSON من إعدادات المصادر."
+                        else "سيتم تجربة " + visibleServers.size + " خادم تلقائياً حسب الأولوية ثم فتح مشغل EXO مباشرة.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (visibleServers.isEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = visibleServers.isNotEmpty() && !isSniffing,
+                    onClick = {
+                        val hostActivity = activity ?: return@Button
+                        isSniffing = true
+                        selectedItem = null
+                        sniffStatus = "بدء البحث التلقائي عن مصدر صالح..."
+                        scope.launch {
+                            val imdbId = tmdbClient.fetchExternalImdbId(item.id, item.isTv)
+                            val failures = mutableListOf<String>()
+                            var launched = false
+                            for (server in visibleServers) {
+                                sniffStatus = "جاري فحص " + server.name + "..."
+                                val embedUrl = serversStore.buildEmbedUrl(
+                                    server, item.id, imdbId, item.isTv, selectedSeason, selectedEpisode
+                                )
+                                val result = ExoWebViewResolver.capture(hostActivity, embedUrl, server.headers)
+                                val sniffed = result.getOrNull()
+                                if (sniffed == null) {
+                                    failures += server.name + ": " + (result.exceptionOrNull()?.message ?: "لم يتم التقاط رابط")
+                                    continue
                                 }
+                                val displayTitle = if (item.isTv) {
+                                    item.title + " - S" + selectedSeason + "E" + selectedEpisode
+                                } else item.title
+                                val channel = ChannelItem(
+                                    id = "tmdb_" + item.id + "_" + selectedSeason + "_" + selectedEpisode,
+                                    name = displayTitle,
+                                    url = sniffed.streamUrl,
+                                    groupName = "TMDB",
+                                    headers = buildMap {
+                                        putAll(sniffed.requestHeaders)
+                                        if (sniffed.referer.isNotBlank()) put("Referer", sniffed.referer)
+                                        if (sniffed.userAgent.isNotBlank()) put("User-Agent", sniffed.userAgent)
+                                        if (sniffed.cookies.isNotBlank()) put("Cookie", sniffed.cookies)
+                                    },
+                                    subtitles = sniffed.subtitles,
+                                    contentType = ContentType.VOD,
+                                    qualities = sniffed.candidates.drop(1).mapIndexed { index, candidate ->
+                                        QualityOption(
+                                            label = "بديل EXO " + (index + 1) + " (" + candidate.type + ")",
+                                            url = candidate.url,
+                                            qualityType = candidate.type,
+                                            headers = candidate.headers
+                                        )
+                                    }
+                                )
+                                PlayerLaunchBridge.launch(context, listOf(channel), 0, PlayerLaunchBridge.EngineType.EXOTV)
+                                launched = true
+                                break
+                            }
+                            isSniffing = false
+                            if (!launched) {
+                                sniffStatus = failures.joinToString("\n").ifBlank { "لم يتم العثور على مصدر صالح." }
+                                selectedItem = item
+                            } else {
+                                sniffStatus = null
                             }
                         }
                     }
-                }
+                ) { Text("تشغيل تلقائي عبر EXO TV") }
             },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(enabled = !isSniffing, onClick = { selectedItem = null }) { Text("إغلاق") }
-            }
+            dismissButton = { TextButton(onClick = { selectedItem = null }) { Text("إلغاء") } }
         )
     }
 
-    // Engine Chooser after Stream Sniffed
-    readyStream?.let { (title, sniffed) ->
-        val channel = ChannelItem(
-            id = "tmdb_${title.hashCode()}",
-            name = title,
-            url = sniffed.streamUrl,
-            groupName = "TMDB",
-            headers = buildMap {
-                putAll(sniffed.requestHeaders)
-                put("Referer", sniffed.referer)
-                put("User-Agent", sniffed.userAgent)
-                if (sniffed.cookies.isNotBlank()) put("Cookie", sniffed.cookies)
-            },
-            subtitles = sniffed.subtitles,
-            contentType = ContentType.VOD,
-            qualities = sniffed.candidates.drop(1).mapIndexed { index, candidate ->
-                QualityOption(
-                    label = "بديل EXO " + (index + 1) + " (" + candidate.type + ")",
-                    url = candidate.url,
-                    qualityType = candidate.type,
-                    headers = candidate.headers
-                )
-            }
-        )
+    if (isSniffing) {
         AlertDialog(
-            onDismissRequest = { readyStream = null },
-            title = { Text("تم التقاط البث بنجاح") },
+            onDismissRequest = {},
+            title = { Text("جاري تجهيز المشغل") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(title, fontWeight = FontWeight.Bold)
-                    if (sniffed.subtitles.isNotEmpty()) {
-                        Text("تم التقاط ${sniffed.subtitles.size} ملف ترجمة", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4CAF50))
-                    }
-                    Button(
-                        onClick = {
-                            readyStream = null
-                            PlayerLaunchBridge.launch(context, listOf(channel), 0, PlayerLaunchBridge.EngineType.MEDIA3)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("تشغيل عبر Media3 ExoPlayer") }
-                    OutlinedButton(
-                        onClick = {
-                            readyStream = null
-                            PlayerLaunchBridge.launch(context, listOf(channel), 0, PlayerLaunchBridge.EngineType.LIBMPV)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("تشغيل عبر libmpv") }
-                    OutlinedButton(
-                        onClick = {
-                            readyStream = null
-                            PlayerLaunchBridge.launch(context, listOf(channel), 0, PlayerLaunchBridge.EngineType.EXOTV)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("تشغيل عبر مشغل EXO TV") }
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    Text(sniffStatus ?: "جاري البحث عن رابط البث...")
                 }
             },
-            confirmButton = {},
-            dismissButton = { TextButton(onClick = { readyStream = null }) { Text("إلغاء") } }
+            confirmButton = {}
         )
     }
 }

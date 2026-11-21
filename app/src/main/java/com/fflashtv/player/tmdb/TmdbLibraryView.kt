@@ -221,6 +221,8 @@ fun TmdbLibraryView(
                                         if (activity == null) return@OutlinedButton
                                         isSniffing = true
                                         sniffStatus = "جاري اقتناص البث من ${srv.name} (مع فلترة الإعلانات)..."
+                                        // Remove the Compose picker before the sniffer attaches its interactive WebView.
+                                        selectedItem = null
                                         scope.launch {
                                             val imdbId = tmdbClient.fetchExternalImdbId(item.id, item.isTv)
                                             val embedUrl = serversStore.buildEmbedUrl(srv, item.id, imdbId, item.isTv, selectedSeason, selectedEpisode)
@@ -232,6 +234,7 @@ fun TmdbLibraryView(
                                                 readyStream = displayTitle to sniffed
                                             }.onFailure { err ->
                                                 sniffStatus = err.message ?: "فشل الاقتناص"
+                                                selectedItem = item
                                             }
                                         }
                                     },

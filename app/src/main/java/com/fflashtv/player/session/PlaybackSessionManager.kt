@@ -367,6 +367,18 @@ class PlaybackSessionManager(
         }
     }
 
+    fun addExternalSubtitle(url: String): Result<Unit> {
+        val cleanUrl = url.trim()
+        val uri = runCatching { android.net.Uri.parse(cleanUrl) }.getOrNull()
+        if (uri == null || uri.scheme !in setOf("http", "https") || uri.host.isNullOrBlank()) {
+            return Result.failure(IllegalArgumentException("أدخل رابط ترجمة HTTP أو HTTPS صالحاً"))
+        }
+        val current = activeSession?.parsed?.originalInput
+            ?: return Result.failure(IllegalStateException("لا توجد جلسة تشغيل نشطة"))
+        openSource(current.copy(subtitles = (current.subtitles + cleanUrl).distinct()), preservePosition = !_state.value.isLive)
+        return Result.success(Unit)
+    }
+
     fun selectQuality(option: QualityOption) {
         val current = activeSession?.parsed?.originalInput ?: return
         val updatedQualities = current.qualities.map {

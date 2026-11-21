@@ -138,10 +138,12 @@ object ExoWebViewResolver {
                         if (cont.isActive) cont.resume(stream)
                     }
                     fun loadHop(url: String) {
-                        if (done.get() || hops.size >= 5) return
+                        if (done.get()) return
+                        if (hops.size >= 5) { fail("تجاوزت سلسلة المصدر الحد الأقصى للتنقلات") ; return }
                         val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return
                         val host = uri.host?.lowercase().orEmpty()
-                        if (uri.scheme !in listOf("http", "https") || host.isBlank() || isAdHost(host) || !hops.add(url)) return
+                        if (uri.scheme !in listOf("http", "https") || host.isBlank() || isAdHost(host)) return
+                        if (!hops.add(url)) { fail("اكتُشفت حلقة تنقل داخل صفحة المصدر") ; return }
                         val previous = page.get()
                         page.set(url)
                         view?.loadUrl(url, mapOf("Referer" to previous, "User-Agent" to UA))
@@ -257,8 +259,10 @@ object ExoWebViewResolver {
                 outcome != null -> Result.success(outcome)
                 terminal.get() == "CAPTURE_CANCELLED" -> Result.failure(IllegalStateException("CAPTURE_CANCELLED"))
                 else -> Result.failure(IllegalStateException(
-                    "انتهت مهلة EXO دون التقاط بث. تحميل الصفحة: " +
-                        (if (loaded.get()) "نعم" else "لا") + " | المرشحون: " + count.get()
+                    terminal.get().ifBlank {
+                        "انتهت مهلة EXO دون التقاط بث. تحميل الصفحة: " +
+                            (if (loaded.get()) "نعم" else "لا") + " | المرشحون: " + count.get()
+                    }
                 ))
             }
         }

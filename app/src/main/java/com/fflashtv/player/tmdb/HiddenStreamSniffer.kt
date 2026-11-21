@@ -468,7 +468,7 @@ object HiddenStreamSniffer {
 
                                     // Strategy 3: semantic controls, in the page's language.
                                     if (!activated && state.tick >= 2) {
-                                      var labels = /^(play|watch|start|continue|مشاهدة|شاهد|تشغيل|ابدأ|استمرار)(\\s|$)/i;
+                                      var labels = /^(play|watch|start|continue|مشاهدة|شاهد|تشغيل|ابدأ|استمرار)(\s|$)/i;
                                       var controls = document.querySelectorAll('button,[role="button"],input[type="button"],input[type="submit"]');
                                       for (var ci = 0; ci < controls.length && !activated; ci++) {
                                         var el = controls[ci];

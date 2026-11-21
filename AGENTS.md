@@ -13,8 +13,8 @@
 
 ## Existing architecture
 - `tmdb/ExoWebViewResolver.kt`: EXO TV-derived hidden WebView resolver, event bridge, player-page hops, stream/subtitle discovery, cookie/header export, and bounded cleanup.
-- `tmdb/TmdbLibraryView.kt`: builds the existing source embed URL, calls ExoWebViewResolver, and offers the three player presentations.
-- `ui/PlayerLaunchBridge.kt`: normalizes ChannelItem playlists into PlaybackInput and dispatches to Media3, libmpv, or EXO-style player Activity.
+- `tmdb/TmdbLibraryView.kt`: automatically tries enabled source servers by priority, captures a usable stream with ExoWebViewResolver, and launches EXO TV.
+- `ui/PlayerLaunchBridge.kt`: normalizes ChannelItem playlists into PlaybackInput and dispatches only to ExoTvPlayerActivity.
 - `ui/ExoTvPlayerActivity.kt` and `ui/ExoTvPlayerScreen.kt`: EXO-style Media3 player presentation.
 - `resolver/`: MIME probing and playback input parsing.
 - `network/`, `session/`, `recovery/`, `buffer/`, `netlimit/`: existing playback/network/session controls.
@@ -65,7 +65,7 @@
 
 ## Build validation fixes
 - `PlayerLaunchBridge` has one canonical definition in `ui/PlayerLaunchBridge.kt`; do not redeclare it in `LibraryViewModel.kt`.
-- The shared player bridge owns the `MEDIA3`, `LIBMPV`, and `EXOTV` presentation selection.
+- The shared player bridge has a single launch API and no engine-selection enum or parameter.
 - Hidden WebView resolver code using visibility/layer constants must import `android.view.View`.
 - Always run `:app:assembleDebug` after Kotlin integration changes; Termux builds may emit non-fatal NDK `llvm-strip` host-binary warnings while packaging unstripped native libraries.
 

@@ -47,10 +47,9 @@ class ExoTvStreamResolver(
 
     private fun resolveDefault(id: String, config: ExoTvAppConfig): List<ExoTvResolvedStream> {
         require(config.ytApi.isNotBlank()) { "EXO ytapi is missing from appConfig" }
-        val encoded = getText(config.ytApi + id + "?_=" + System.currentTimeMillis(), config.ytApiHeaders)
-        val token = lastResponseHeader
-        val json = decodeTokenPayload(encoded, token)
-        return parseResolvedStreams(json, config.genStreamHeaders)
+        val response = getText(config.ytApi + id + "?_=" + System.currentTimeMillis(), config.ytApiHeaders)
+        val json = decodeTokenPayload(response.body, response.token)
+        return parseResolvedStreams(json)
     }
 
     private fun resolveYtv(channel: ExoTvChannel, config: ExoTvAppConfig): List<ExoTvResolvedStream> {
@@ -60,15 +59,15 @@ class ExoTvStreamResolver(
         require(base.isNotBlank()) { "EXO ytvbase/ytapi is missing from appConfig" }
         val headers = config.ytvHeaders.ifEmpty { config.ytApiHeaders }
 
-        val categoriesBody = getText("$base/api/categories", headers)
-        val categories = parseFlexibleArray(JSONObject(decodeTokenPayload(categoriesBody, lastResponseHeader)))
+        val categoriesResponse = getText("$base/api/categories", headers)
+        val categories = parseFlexibleArray(JSONObject(decodeTokenPayload(categoriesResponse.body, categoriesResponse.token)))
         val category = categories.firstOrNull { it.optString("name") == categoryName }
             ?: error("EXO YTV category not found: $categoryName")
         val categoryId = category.optString("id")
         require(categoryId.isNotBlank()) { "EXO YTV category has no id" }
 
-        val channelsBody = getText("$base/api/categories/$categoryId/channels", headers)
-        val channels = parseFlexibleArray(JSONObject(decodeTokenPayload(channelsBody, lastResponseHeader)))
+        val channelsResponse = getText("$base/api/categories/$categoryId/channels", headers)
+        val channels = parseFlexibleArray(JSONObject(decodeTokenPayload(channelsResponse.body, channelsResponse.token)))
         val item = channels.firstOrNull { it.optString("name") == channelName }
             ?: error("EXO YTV channel not found: $channelName")
         val id = item.optString("id")
@@ -80,8 +79,8 @@ class ExoTvStreamResolver(
         require(config.ostApi.isNotBlank()) { "EXO ostapi is missing from appConfig" }
         val category = channel.catO ?: error("EXO O resolver category id is missing")
         val channelId = channel.idO ?: error("EXO O resolver channel id is missing")
-        val encoded = getText(config.ostApi + category + "?page=1", config.ostApiHeaders)
-        val decrypted = decryptOResponse(encoded)
+        val response = getText(config.ostApi + category + "?page=1", config.ostApiHeaders)
+        val decrypted = decryptOResponse(response.body)
         val data = JSONObject(decrypted).optJSONObject("data")
         val items = data?.optJSONArray("items") ?: JSONArray()
         val item = (0 until items.length())
@@ -99,9 +98,9 @@ class ExoTvStreamResolver(
         return listOf(ExoTvResolvedStream(url, headers, "EXO O"))
     }
 
-    private var lastResponseHeader: String = ""
+    private data class ApiResponse(val body: String, val token: String)
 
-    private fun getText(url: String, headers: Map<String, String>): String {
+    private fun getText(url: String, headers: Map<String, String>): ApiResponse {
         val builder = Request.Builder()
             .url(url)
             .header("User-Agent", DEFAULT_USER_AGENT)
@@ -111,8 +110,7 @@ class ExoTvStreamResolver(
         }
         return client.newCall(builder.build()).execute().use { response ->
             if (!response.isSuccessful) error("EXO resolver returned HTTP ${response.code}")
-            lastResponseHeader = response.header("t").orEmpty()
-            response.body?.string().orEmpty()
+            ApiResponse(response.body?.string().orEmpty(), response.header("t").orEmpty())
         }
     }
 
@@ -134,20 +132,23 @@ class ExoTvStreamResolver(
         return String(cipher.doFinal(encrypted), StandardCharsets.UTF_8)
     }
 
-    private fun parseResolvedStreams(json: JSONObject, defaultHeaders: Map<String, String>): List<ExoTvResolvedStream> {
+    private fun parseResolvedStreams(json: JSONObject): List<ExoTvResolvedStream> {
         val data = json.optJSONArray("data") ?: return emptyList()
         return (0 until data.length()).mapNotNull { index ->
             val item = data.optJSONObject(index) ?: return@mapNotNull null
             val url = item.optString("url").takeIf { it.startsWith("http://") || it.startsWith("https://") }
                 ?: return@mapNotNull null
             val headers = linkedMapOf<String, String>().apply {
-                putAll(defaultHeaders)
                 putAll(item.optJSONObject("headers").toStringMap())
                 item.optString("user_agent").takeIf { it.isNotBlank() }?.let { put("User-Agent", it) }
                 item.optString("referer").takeIf { it.isNotBlank() }?.let { put("Referer", it) }
             }
+            val userAgentKey = headers.keys.firstOrNull { it.equals("User-Agent", true) }
+            if (userAgentKey != null && headers[userAgentKey].orEmpty().startsWith("\u3164 ")) {
+                headers[userAgentKey] = ""
+            }
             ExoTvResolvedStream(url, headers, item.optString("name"))
-        }
+        }.take(6)
     }
 
     private fun parseFlexibleArray(json: JSONObject): List<JSONObject> {

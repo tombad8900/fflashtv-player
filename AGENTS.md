@@ -132,4 +132,11 @@
 - Added the original channel/category field contract, including backupURLs objects with per-server headers and the exact resolver-kind precedence/null checks from Channel.getResolverKind().
 - Added an EXO TV catalog tab in the existing library. It fetches the remote catalog, groups channels by EXO categories, and sends resolved sources through the shared FFlash player entry point.
 - Ported BACKUP, YTV, O, and DEFAULT channel resolution flows, including the original response token/XOR handling for YTV/DEFAULT and AES-CBC decoding for O.
-- GEN remains the outstanding resolver family and is not to be represented as supported until its recursive API/server-signing flow is ported and verified. Do not claim the EXO application is fully merged based only on these pieces.
+- Added the GEN resolver path: app_tv_box settings decryption, x-v3 HMAC authentication, recursive /get/ lookup, server-number selection, remote IP lookup, stream/id/direct URL signing, and per-server headers. Runtime verification against live EXO servers is still required.
+
+
+## Original EXO player data-source migration (2026-11-21)
+- Replaced the FFlash-specific ExoPlayerEngine with ExoTvOriginalPlayerEngine. It builds Media3 through DefaultMediaSourceFactory + DefaultHttpDataSource.Factory, enables cross-protocol redirects, uses 5s connect / 12s read timeouts, passes original request headers, and applies the original Chrome 151 fallback User-Agent only when no User-Agent header is supplied.
+- The engine uses Media3's default LoadControl and renderer stack, matching the original EXO PlayerActivity construction path. Session playback continues to own media-item creation, subtitles, resume position, and watch tracking.
+- Removed the FFlash BufferManager, StreamDataSourceFactory, Media3 OkHttp data-source dependency, and the custom Media3 load-error policy factory. OkHttp remains for EXO server/config resolvers, probes, and network services.
+- Build verification for the latest engine migration is pending; do not claim it is complete until the GitHub Actions APK build succeeds.

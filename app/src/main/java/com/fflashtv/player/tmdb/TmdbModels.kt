@@ -40,5 +40,6 @@ data class SniffedStream(
     val userAgent: String,
     val cookies: String = "",
     val subtitles: List<String> = emptyList(),
-    val diagnostics: String = ""
+    val diagnostics: String = "",
+    val requestHeaders: Map<String, String> = emptyMap()
 )

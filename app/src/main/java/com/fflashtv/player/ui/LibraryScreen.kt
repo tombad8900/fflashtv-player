@@ -257,7 +257,7 @@ fun LibraryScreen(ui: LibraryUiState, viewModel: LibraryViewModel, onGoToSources
                     itemsIndexed(displayedChannels, key = { _, ch -> ch.id }) { idx, ch ->
                         val isFav = ch.id in ui.favoriteIds
                         Card(
-                            modifier = Modifier.fillMaxWidth().clickable { PlayerLaunchBridge.launch(context, displayedChannels, idx, PlayerLaunchBridge.EngineType.EXOTV) },
+                            modifier = Modifier.fillMaxWidth().clickable { PlayerLaunchBridge.launch(context, displayedChannels, idx) },
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f))
                         ) {
                             Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {

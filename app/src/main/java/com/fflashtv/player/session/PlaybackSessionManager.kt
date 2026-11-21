@@ -15,6 +15,7 @@ import com.fflashtv.player.drm.DrmManager
 import com.fflashtv.player.history.WatchHistoryRepository
 import com.fflashtv.player.history.WatchProgressStore
 import com.fflashtv.player.history.WatchTracker
+import com.fflashtv.player.model.BackupSource
 import com.fflashtv.player.model.ParsedPlayback
 import com.fflashtv.player.model.PlaybackInput
 import com.fflashtv.player.model.QualityOption
@@ -78,6 +79,8 @@ data class PlaybackState(
     val retryAttempt: Int = 0,
     val tracks: List<TrackInfo> = emptyList(),
     val qualities: List<QualityOption> = emptyList(),
+    val servers: List<BackupSource> = emptyList(),
+    val selectedServerUrl: String = "",
     val resizeIndex: Int = 0,
     val isFullscreen: Boolean = false,
     val isInPip: Boolean = false,
@@ -147,6 +150,15 @@ class PlaybackSessionManager(
         }
     }
 
+    private fun serverOptionsFor(parsed: ParsedPlayback): List<BackupSource> {
+        val candidates = buildList {
+            add(BackupSource(parsed.url, parsed.headers, "المصدر الحالي"))
+            addAll(parsed.backupSources)
+        }
+        val seen = linkedSetOf<String>()
+        return candidates.filter { it.url.isNotBlank() && seen.add(it.url) }
+    }
+
     fun setResolvingExternalSource(title: String) {
         _state.update {
             it.copy(
@@ -159,7 +171,9 @@ class PlaybackSessionManager(
                 positionMs = 0L,
                 durationMs = 0L,
                 tracks = emptyList(),
-                qualities = emptyList()
+                qualities = emptyList(),
+                servers = emptyList(),
+                selectedServerUrl = ""
             )
         }
     }
@@ -213,6 +227,8 @@ class PlaybackSessionManager(
                 retryAttempt = 0,
                 tracks = emptyList(),
                 qualities = initialParsed.qualities,
+                servers = serverOptionsFor(initialParsed),
+                selectedServerUrl = initialParsed.url,
                 previousAvailable = currentIndex > 0,
                 nextAvailable = currentIndex in 0 until (playlist.size - 1)
             )
@@ -341,23 +357,34 @@ class PlaybackSessionManager(
                             ErrorCategory.IO_ERROR,
                             ErrorCategory.PARSING_ERROR
                         )
-                        val backup = if (canFailOver) {
+                        val backupSource = if (canFailOver) {
+                            parsed.backupSources.firstOrNull { candidate ->
+                                candidate.url.isNotBlank() && candidate.url !in triedFallbackUrls
+                            }
+                        } else null
+                        val backupQuality = if (canFailOver && backupSource == null) {
                             parsed.originalInput.qualities.firstOrNull { option ->
                                 option.url.isNotBlank() && option.url !in triedFallbackUrls
                             }
                         } else null
 
-                        if (backup != null) {
-                            triedFallbackUrls.add(backup.url)
+                        if (backupSource != null || backupQuality != null) {
+                            val fallbackUrl = backupSource?.url ?: backupQuality!!.url
+                            val fallbackHeaders = backupSource?.headers?.ifEmpty { parsed.headers }
+                                ?: backupQuality!!.headers.ifEmpty { parsed.headers }
+                            val fallbackName = backupSource?.name?.takeIf { it.isNotBlank() }
+                                ?: backupQuality?.label
+                                ?: "السيرفر البديل"
+                            triedFallbackUrls.add(fallbackUrl)
                             val selectedOptions = parsed.originalInput.qualities.map { option ->
-                                option.copy(isSelected = option.url == backup.url && option.label == backup.label)
+                                option.copy(isSelected = option.url == fallbackUrl && option.label == backupQuality?.label)
                             }
                             val fallbackInput = parsed.originalInput.copy(
-                                url = backup.url,
-                                headers = backup.headers.ifEmpty { parsed.headers },
-                                drmConfig = if (backup.drmConfig.type != com.fflashtv.player.model.DrmType.NONE) {
-                                    backup.drmConfig
-                                } else parsed.drmConfig,
+                                url = fallbackUrl,
+                                headers = fallbackHeaders,
+                                drmConfig = backupQuality?.drmConfig?.takeIf {
+                                    it.type != com.fflashtv.player.model.DrmType.NONE
+                                } ?: parsed.drmConfig,
                                 qualities = selectedOptions,
                                 resumePositionMs = resumePos
                             )
@@ -365,7 +392,7 @@ class PlaybackSessionManager(
                                 it.copy(
                                     lifecycle = SessionLifecycleState.RECOVERING,
                                     isBuffering = true,
-                                    errorMessage = "تعذر تشغيل المصدر الحالي؛ جاري تجربة ${backup.label}"
+                                    errorMessage = "تعذر تشغيل المصدر الحالي؛ جاري تجربة $fallbackName"
                                 )
                             }
                             openSource(
@@ -441,6 +468,19 @@ class PlaybackSessionManager(
             ?: return Result.failure(IllegalStateException("لا توجد جلسة تشغيل نشطة"))
         openSource(current.copy(subtitles = (current.subtitles + cleanUrl).distinct()), preservePosition = !_state.value.isLive)
         return Result.success(Unit)
+    }
+
+    fun selectServer(source: BackupSource) {
+        val current = activeSession?.parsed?.originalInput ?: return
+        if (source.url.isBlank() || source.url == _state.value.url) return
+        openSource(
+            current.copy(
+                url = source.url,
+                headers = source.headers.ifEmpty { current.headers },
+                resumePositionMs = if (_state.value.isLive) 0L else _state.value.positionMs
+            ),
+            preservePosition = !_state.value.isLive
+        )
     }
 
     fun selectQuality(option: QualityOption) {

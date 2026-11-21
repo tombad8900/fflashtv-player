@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="caption_pad_h">16.0dip</dimen>
+    <dimen name="caption_pad_v">4.0dip</dimen>
+    <dimen name="caption_text">28.0sp</dimen>
+    <dimen name="category_padding_v">18.0dip</dimen>
+    <dimen name="channel_label_text">18.0sp</dimen>
+    <dimen name="channels_padding_h">10.0dip</dimen>
+    <dimen name="content_padding_h">12.0dip</dimen>
+    <dimen name="featured_slider_margin_top">16.0dip</dimen>
+    <dimen name="featured_slider_margin_v">20.0dip</dimen>
+    <dimen name="player_error_button_gap">24.0dip</dimen>
+    <dimen name="player_error_button_min_w">200.0dip</dimen>
+    <dimen name="player_error_buttons_gap">40.0dip</dimen>
+    <dimen name="player_error_pad_h">56.0dip</dimen>
+    <dimen name="player_error_pad_v">44.0dip</dimen>
+    <dimen name="player_error_text">28.0sp</dimen>
+    <item type="dimen" name="rail_width_weight">0.22</item>
+    <dimen name="retry_padding_h">80.0dip</dimen>
+    <dimen name="retry_padding_v">24.0dip</dimen>
+    <dimen name="retry_radius">20.0dip</dimen>
+    <dimen name="retry_text">26.0sp</dimen>
+    <dimen name="update_title_text">52.0sp</dimen>
+</resources>

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="channel_card_ratio_expr">H,1:1.05</string>
+</resources>

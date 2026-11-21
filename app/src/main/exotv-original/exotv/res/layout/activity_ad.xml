@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout android:id="@id/adRoot" android:background="#cc000000" android:clickable="true" android:descendantFocusability="afterDescendants" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+    <FrameLayout android:id="@id/adCard" android:background="@drawable/bg_player_controls" android:layout_width="0.0dip" android:layout_height="0.0dip" android:layout_marginTop="24.0dip" android:layout_marginBottom="12.0dip" app:layout_constraintBottom_toTopOf="@id/adClose" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintHeight_percent="0.82" app:layout_constraintStart_toStartOf="parent" app:layout_constraintTop_toTopOf="parent" app:layout_constraintWidth_percent="0.92">
+        <WebView android:id="@id/adWebView" android:layout_width="fill_parent" android:layout_height="fill_parent" />
+        <TextView android:textSize="16.0sp" android:textColor="@android:color/white" android:layout_gravity="center" android:id="@id/adLoading" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ad_loading" />
+    </FrameLayout>
+    <View android:id="@id/adNavBar" android:layout_width="0.0dip" android:layout_height="0.0dip" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" />
+    <Button android:textSize="16.0sp" android:id="@id/adClose" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="20.0dip" android:minWidth="200.0dip" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintStart_toStartOf="parent" />
+</androidx.constraintlayout.widget.ConstraintLayout>

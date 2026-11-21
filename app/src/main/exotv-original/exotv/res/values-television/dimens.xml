@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item type="dimen" name="nav_horizontal_padding">@dimen/large_nav_horizontal_padding</item>
+    <item type="dimen" name="nav_icon_lift">@dimen/large_nav_icon_lift</item>
+    <item type="dimen" name="nav_icon_size">@dimen/large_nav_icon_size</item>
+    <item type="dimen" name="nav_item_gap">@dimen/large_nav_item_gap</item>
+    <item type="dimen" name="nav_item_padding_h">@dimen/large_nav_item_padding_h</item>
+    <item type="dimen" name="nav_item_padding_v">@dimen/large_nav_item_padding_v</item>
+    <item type="dimen" name="nav_label_indent">@dimen/large_nav_item_gap</item>
+    <item type="dimen" name="nav_label_text_size">@dimen/large_nav_label_text_size</item>
+    <item type="dimen" name="nav_logo_gap">@dimen/large_nav_logo_gap</item>
+    <item type="dimen" name="nav_logo_margin_bottom">@dimen/large_nav_logo_margin_bottom</item>
+    <item type="dimen" name="nav_logo_mark_gap">@dimen/large_nav_logo_mark_gap</item>
+    <item type="dimen" name="nav_logo_size">@dimen/large_nav_logo_size</item>
+    <item type="dimen" name="nav_logo_text">@dimen/large_nav_logo_text</item>
+    <item type="dimen" name="nav_vertical_padding">@dimen/large_nav_vertical_padding</item>
+    <item type="dimen" name="subs_list_max_height">@dimen/large_subs_list_max_height</item>
+    <item type="dimen" name="subs_panel_max_height">@dimen/large_subs_panel_max_height</item>
+    <item type="dimen" name="subs_panel_max_width">@dimen/large_subs_panel_max_width</item>
+</resources>

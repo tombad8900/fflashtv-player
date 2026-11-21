@@ -49,7 +49,6 @@ fun LibraryScreen(ui: LibraryUiState, viewModel: LibraryViewModel, onGoToSources
     var showSourcePicker by remember { mutableStateOf(false) }
     var showGroupManager by remember { mutableStateOf(false) }
     var showAuditLog by remember { mutableStateOf(false) }
-    var pendingEngineChoice by remember { mutableStateOf<Pair<List<ChannelItem>, Int>?>(null) }
 
     val tmdbClient = remember { TmdbClient(context) }
     val serversStore = remember { JsonServersStore(context) }
@@ -258,7 +257,7 @@ fun LibraryScreen(ui: LibraryUiState, viewModel: LibraryViewModel, onGoToSources
                     itemsIndexed(displayedChannels, key = { _, ch -> ch.id }) { idx, ch ->
                         val isFav = ch.id in ui.favoriteIds
                         Card(
-                            modifier = Modifier.fillMaxWidth().clickable { pendingEngineChoice = displayedChannels to idx },
+                            modifier = Modifier.fillMaxWidth().clickable { PlayerLaunchBridge.launch(context, displayedChannels, idx, PlayerLaunchBridge.EngineType.EXOTV) },
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f))
                         ) {
                             Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -280,42 +279,6 @@ fun LibraryScreen(ui: LibraryUiState, viewModel: LibraryViewModel, onGoToSources
                 }
             }
         }
-    }
-
-    pendingEngineChoice?.let { (list, idx) ->
-        val chName = list.getOrNull(idx)?.name ?: ""
-        AlertDialog(
-            onDismissRequest = { pendingEngineChoice = null },
-            title = { Text("اختر محرك التشغيل") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(chName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                    Button(
-                        onClick = {
-                            pendingEngineChoice = null
-                            PlayerLaunchBridge.launch(context, list, idx, PlayerLaunchBridge.EngineType.MEDIA3)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("Media3 ExoPlayer (المحرك القياسي)") }
-                    OutlinedButton(
-                        onClick = {
-                            pendingEngineChoice = null
-                            PlayerLaunchBridge.launch(context, list, idx, PlayerLaunchBridge.EngineType.LIBMPV)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("libmpv (المحرك المفتوح المصدر)") }
-                    OutlinedButton(
-                        onClick = {
-                            pendingEngineChoice = null
-                            PlayerLaunchBridge.launch(context, list, idx, PlayerLaunchBridge.EngineType.EXOTV)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("مشغل EXO TV") }
-                }
-            },
-            confirmButton = {},
-            dismissButton = { TextButton(onClick = { pendingEngineChoice = null }) { Text("إلغاء") } }
-        )
     }
 
     if (showAuditLog) {

@@ -117,3 +117,11 @@
 - Existing `app/src/main/exotv-original/` is an analysis snapshot, not a build source set. The prior snapshot contains 4,491 files and does not include the current complete Apktool Smali tree. Do not claim that the full original player payload has already been integrated.
 - A full-snapshot import workflow was added at `.github/workflows/import-exotv-full-source.yml`. Its first run `44887224588` failed at checkout of the private reference repository because `secrets.REFERENCE_REPO_TOKEN` is not configured in this target repository. Do not claim import completion or rerun unchanged. The GitHub connector can read the reference repo, but Actions cannot access it without a repository-scoped credential.
 - The current source artifact is available for analysis. Continue mapping the original PlayerActivity's behavior and dependencies against FFlashTV's single Media3 session/player implementation. Never copy decompiled JADX output or the original package's duplicate AndroidX classes into the Gradle source set, and never report a full binary transplant unless the classes, resources, and runtime launch path are actually integrated and validated.
+
+
+## Original EXO server-list and failover behavior port (2026-11-21)
+- The original EXO PlayerActivity receives a primary stream plus an ordered exo_backups list. Each backup is a distinct URL with its own request headers and optional display name; this is not a video quality track or a playlist item.
+- PlaybackInput now carries backupSources separately from qualities. The EXO resolver's secondary stream candidates are mapped to backup servers, while Media3 track/quality selection remains separate.
+- The player server dialog displays the active source and ordered backup servers. Selecting a server switches the same media item, preserves VOD position, and keeps that server's own headers.
+- Retryable I/O/parsing failures try unattempted EXO backup servers sequentially before the legacy quality fallback. The attempted-server set prevents repeated requests to the same URL during one recovery chain.
+- This is a focused port of EXO's per-server UI/header/failover contract. It does not mean the original EXO channel catalog, remote config service, all resolver families, or proprietary app shell have been transplanted yet.

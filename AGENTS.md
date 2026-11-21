@@ -125,3 +125,11 @@
 - The player server dialog displays the active source and ordered backup servers. Selecting a server switches the same media item, preserves VOD position, and keeps that server's own headers.
 - Retryable I/O/parsing failures try unattempted EXO backup servers sequentially before the legacy quality fallback. The attempted-server set prevents repeated requests to the same URL during one recovery chain.
 - This is a focused port of EXO's per-server UI/header/failover contract. It does not mean the original EXO channel catalog, remote config service, all resolver families, or proprietary app shell have been transplanted yet.
+
+
+## EXO remote catalog and simple resolver port (2026-11-21)
+- Added the EXO appConfig.php loader and channelsURL payload decoder. The decoder matches the original Base64 URL-safe normalization followed by XOR with the EXO payload key; decoded configuration is kept in memory.
+- Added the original channel/category field contract, including backupURLs objects with per-server headers and the exact resolver-kind precedence/null checks from Channel.getResolverKind().
+- Added an EXO TV catalog tab in the existing library. It fetches the remote catalog, groups channels by EXO categories, and sends resolved sources through the shared FFlash player entry point.
+- Ported BACKUP, YTV, O, and DEFAULT channel resolution flows, including the original response token/XOR handling for YTV/DEFAULT and AES-CBC decoding for O.
+- GEN remains the outstanding resolver family and is not to be represented as supported until its recursive API/server-signing flow is ported and verified. Do not claim the EXO application is fully merged based only on these pieces.

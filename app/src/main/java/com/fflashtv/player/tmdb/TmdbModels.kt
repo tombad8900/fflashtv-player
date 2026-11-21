@@ -33,6 +33,12 @@ data class JsonServer(
     val hiddenFromPicker: Boolean = false
 )
 
+data class SniffedCandidate(
+    val url: String,
+    val type: String,
+    val headers: Map<String, String> = emptyMap()
+)
+
 data class SniffedStream(
     val streamUrl: String,
     val streamType: String = "AUTO",
@@ -41,5 +47,6 @@ data class SniffedStream(
     val cookies: String = "",
     val subtitles: List<String> = emptyList(),
     val diagnostics: String = "",
-    val requestHeaders: Map<String, String> = emptyMap()
+    val requestHeaders: Map<String, String> = emptyMap(),
+    val candidates: List<SniffedCandidate> = emptyList()
 )

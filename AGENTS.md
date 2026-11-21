@@ -77,8 +77,15 @@
 - Legacy Media3 and libmpv Activities, screens, engine sources, and the libmpv Gradle dependency have been removed. Keep EXO TV as the only playback presentation.
 - EXO TV here is the EXO-derived player presentation on AndroidX Media3; do not claim that the proprietary APK's complete binary/classes were transplanted from Smali.
 
+## EXO player feature port
+- Player controls separate alternate server/source selection from in-stream video-track quality selection.
+- Controls include previous/next playlist navigation when available, 10-second seek, mute and volume dialog, playback-speed presets, aspect-ratio cycling, fullscreen, PiP, and playback diagnostics.
+- External subtitle URLs are added to the active media item after HTTP/HTTPS validation; Media3 handles supported SRT/VTT/ASS subtitle tracks.
+- Server switching preserves VOD position and uses the selected candidate's own headers; it must not advance playlist navigation.
+- Match reference behavior from the inspected layout: distinct server, quality, subtitle, error, seek, and bottom-control panels. Do not claim full parity until each behavior is verified.
+
 ## Private EXO reference APK decompilation
-- The source repository `tombad8900/exotv-analysis-reference` is private and cannot be checked out with the target repository's default `GITHUB_TOKEN`.
+- The source repository `tombad8900/exotv-analysis-reference` is private; the connected GitHub account can read its contents directly. The earlier Actions checkout failure was a workflow-token limitation, not a lack of repository access.
 - The workflow `.github/workflows/decompile-exotv-reference.yml` is manual (`workflow_dispatch`) and uses the repository secret `REFERENCE_REPO_TOKEN` for the source checkout.
-- Before dispatching it, configure `REFERENCE_REPO_TOKEN` in the target repository with a fine-grained token that has read-only Contents access to `tombad8900/exotv-analysis-reference`. Never commit the token or APK credentials.
+- Do not make the reference repository public merely to inspect it. If an Actions checkout is needed, use an appropriately scoped secret; never commit tokens or APK credentials.
 - The workflow uploads `exotv-original-apk-decompiled` containing Apktool resources/manifest and JADX Java output plus the original APK. Download and inspect the artifact before claiming a complete source port.
